@@ -2,30 +2,24 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.repository;
 
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.*;
 import org.b3log.latke.repository.annotation.Repository;
 import org.b3log.solo.model.ArchiveDate;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.ParseException;
@@ -44,7 +38,7 @@ public class ArchiveDateRepository extends AbstractRepository {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(ArchiveDateRepository.class);
+    private static final Logger LOGGER = LogManager.getLogger(ArchiveDateRepository.class);
 
     /**
      * Archive date-Article repository.
@@ -74,12 +68,11 @@ public class ArchiveDateRepository extends AbstractRepository {
             return null;
         }
 
-        LOGGER.log(Level.TRACE, "Archive date [{0}] parsed to time [{1}]", archiveDate, time);
+        LOGGER.log(Level.TRACE, "Archive date [{}] parsed to time [{}]", archiveDate, time);
 
         Query query = new Query().setFilter(new PropertyFilter(ArchiveDate.ARCHIVE_TIME, FilterOperator.EQUAL, time)).setPageCount(1);
-        JSONObject result = get(query);
-        JSONArray array = result.optJSONArray(Keys.RESULTS);
-        if (0 == array.length()) {
+        List<JSONObject> result = getList(query);
+        if (result.isEmpty()) {
             // Try to fix wired timezone issue: https://github.com/b3log/solo/issues/12435
             try {
                 time = DateUtils.parseDate(archiveDate, new String[]{"yyyy/MM"}).getTime();
@@ -88,17 +81,14 @@ public class ArchiveDateRepository extends AbstractRepository {
                 return null;
             }
 
-            LOGGER.log(Level.TRACE, "Fix archive date [{0}] parsed to time [{1}]", archiveDate, time);
-
+            LOGGER.log(Level.TRACE, "Fix archive date [{}] parsed to time [{}]", archiveDate, time);
             query = new Query().setFilter(new PropertyFilter(ArchiveDate.ARCHIVE_TIME, FilterOperator.EQUAL, time)).setPageCount(1);
-            result = get(query);
-            array = result.optJSONArray(Keys.RESULTS);
-            if (0 == array.length()) {
+            result = getList(query);
+            if (result.isEmpty()) {
                 return null;
             }
         }
-
-        return array.optJSONObject(0);
+        return result.get(0);
     }
 
     /**

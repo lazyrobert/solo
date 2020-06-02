@@ -3,18 +3,12 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <div class="bg"></div>
@@ -26,18 +20,15 @@
 <header class="header">
     <div class="header__wrap">
         <a href="${servePath}" rel="start" class="header__logo">
-            <i class="icon__home"></i>   ${blogTitle}
+            <i class="icon__home"></i> ${blogTitle}
         </a>
 
         <nav class="mobile__hidden header__nav">
             <#list pageNavigations as page>
                 <a href="${page.pagePermalink}" target="${page.pageOpenTarget}" rel="section">
-                    <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}"></#if>${page.pageTitle}
+                    <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}" alt="${page.pageTitle}"></#if>${page.pageTitle}
                 </a>
             </#list>
-            <a href="${servePath}/dynamic.html" rel="section">
-                <i class="icon__refresh"></i> ${dynamicLabel}
-            </a>
             <a href="${servePath}/tags.html" rel="section">
                 <i class="icon__tags"></i> ${allTagsLabel}
             </a>
@@ -52,20 +43,22 @@
             </a>
         </nav>
 
-        <div class="header__login">
-             <#if isLoggedIn>
-                 <a href="${servePath}/admin-index.do#main" title="${adminLabel}">
-                     <i class="icon__setting"></i> ${adminLabel}
-                 </a>
-                 <a href="${logoutURL}">
-                     <i class="icon__logout"></i> ${logoutLabel}
-                 </a>
-             <#else>
+        <#if !staticSite>
+            <div class="header__login">
+                <#if isLoggedIn>
+                    <a href="${servePath}/admin-index.do#main" title="${adminLabel}">
+                        <i class="icon__setting"></i> ${adminLabel}
+                    </a>
+                    <a href="${logoutURL}">
+                        <i class="icon__logout"></i> ${logoutLabel}
+                    </a>
+                <#else>
                     <a href="${servePath}/start">
                         <i class="icon__login"></i> ${startToUseLabel}
                     </a>
-             </#if>
-        </div>
+                </#if>
+            </div>
+        </#if>
     </div>
 </header>
 <div class="header__m fn__none">
@@ -74,36 +67,33 @@
     <i class="icon__more" onclick="$(this).next().slideToggle()"></i>
     <main class="module__list">
         <ul>
-        <#if isLoggedIn>
-            <li>
-                <a href="${servePath}/admin-index.do#main" title="${adminLabel}">
-                    <i class="icon__setting"></i> ${adminLabel}
-                </a>
-            </li>
-            <li>
-                <a href="${logoutURL}">
-                    <i class="icon__logout"></i> ${logoutLabel}
-                </a>
-            </li>
-        <#else>
+            <#if !staticSite>
+                <#if isLoggedIn>
+                    <li>
+                        <a href="${servePath}/admin-index.do#main" title="${adminLabel}">
+                            <i class="icon__setting"></i> ${adminLabel}
+                        </a>
+                    </li>
+                    <li>
+                        <a href="${logoutURL}">
+                            <i class="icon__logout"></i> ${logoutLabel}
+                        </a>
+                    </li>
+                <#else>
+                    <li>
+                        <a href="${servePath}/start">
+                            <i class="icon__login"></i> ${startToUseLabel}
+                        </a>
+                    </li>
+                </#if>
+            </#if>
+            <#list pageNavigations as page>
                 <li>
-                    <a href="${servePath}/start">
-                        <i class="icon__login"></i> ${startToUseLabel}
+                    <a href="${page.pagePermalink}" target="${page.pageOpenTarget}" rel="section">
+                        <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}" alt="${page.pageTitle}"></#if>${page.pageTitle}
                     </a>
                 </li>
-        </#if>
-        <#list pageNavigations as page>
-            <li>
-                <a href="${page.pagePermalink}" target="${page.pageOpenTarget}" rel="section">
-                    <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}"></#if>${page.pageTitle}
-                </a>
-            </li>
-        </#list>
-            <li>
-                <a href="${servePath}/dynamic.html" rel="section">
-                    <i class="icon__refresh"></i> ${dynamicLabel}
-                </a>
-            </li>
+            </#list>
             <li>
                 <a href="${servePath}/tags.html" rel="section">
                     <i class="icon__tags"></i> ${allTagsLabel}

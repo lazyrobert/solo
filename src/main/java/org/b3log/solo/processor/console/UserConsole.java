@@ -2,55 +2,50 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.processor.console;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.http.RequestContext;
-import org.b3log.latke.http.annotation.Before;
-import org.b3log.latke.http.annotation.RequestProcessor;
 import org.b3log.latke.http.renderer.JsonRenderer;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.model.User;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.service.ServiceException;
 import org.b3log.solo.service.UserMgmtService;
 import org.b3log.solo.service.UserQueryService;
 import org.b3log.solo.util.Solos;
-import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.List;
 
 /**
  * User console request processing.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://hacpai.com/member/DASHU">DASHU</a>
- * @version 1.2.1.7, Mar 29, 2019
+ * @version 2.0.0.0, Feb 9, 2020
  * @since 0.4.0
  */
-@RequestProcessor
+@Singleton
 public class UserConsole {
 
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(UserConsole.class);
+    private static final Logger LOGGER = LogManager.getLogger(UserConsole.class);
 
     /**
      * User query service.
@@ -98,7 +93,6 @@ public class UserConsole {
      *
      * @param context the specified request context
      */
-    @Before(ConsoleAdminAuthAdvice.class)
     public void updateUser(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -113,7 +107,6 @@ public class UserConsole {
             renderer.setJSONObject(ret);
         } catch (final ServiceException e) {
             LOGGER.log(Level.ERROR, e.getMessage(), e);
-
             final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
             renderer.setJSONObject(jsonObject);
             jsonObject.put(Keys.MSG, langPropsService.get("updateFailLabel"));
@@ -134,7 +127,6 @@ public class UserConsole {
      *
      * @param context the specified request context
      */
-    @Before(ConsoleAdminAuthAdvice.class)
     public void removeUser(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -148,7 +140,6 @@ public class UserConsole {
             jsonObject.put(Keys.MSG, langPropsService.get("removeSuccLabel"));
         } catch (final ServiceException e) {
             LOGGER.log(Level.ERROR, e.getMessage(), e);
-
             jsonObject.put(Keys.STATUS_CODE, false);
             jsonObject.put(Keys.MSG, langPropsService.get("removeFailLabel"));
         }
@@ -181,7 +172,6 @@ public class UserConsole {
      *
      * @param context the specified request context
      */
-    @Before(ConsoleAdminAuthAdvice.class)
     public void getUsers(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -194,16 +184,14 @@ public class UserConsole {
             result.put(Keys.STATUS_CODE, true);
             renderer.setJSONObject(result);
 
-            final JSONArray users = result.optJSONArray(User.USERS);
-            for (int i = 0; i < users.length(); i++) {
-                final JSONObject user = users.optJSONObject(i);
+            final List<JSONObject> users = (List<JSONObject>) result.opt(User.USERS);
+            for (final JSONObject user : users) {
                 String userName = user.optString(User.USER_NAME);
                 userName = StringEscapeUtils.escapeXml(userName);
                 user.put(User.USER_NAME, userName);
             }
         } catch (final ServiceException e) {
             LOGGER.log(Level.ERROR, e.getMessage(), e);
-
             final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
             renderer.setJSONObject(jsonObject);
             jsonObject.put(Keys.MSG, langPropsService.get("getFailLabel"));
@@ -228,7 +216,6 @@ public class UserConsole {
      *
      * @param context the specified request context
      */
-    @Before(ConsoleAdminAuthAdvice.class)
     public void getUser(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -239,7 +226,6 @@ public class UserConsole {
             final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
             renderer.setJSONObject(jsonObject);
             jsonObject.put(Keys.MSG, langPropsService.get("getFailLabel"));
-
             return;
         }
 
@@ -261,7 +247,6 @@ public class UserConsole {
      *
      * @param context the specified request context
      */
-    @Before(ConsoleAdminAuthAdvice.class)
     public void changeUserRole(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -275,7 +260,6 @@ public class UserConsole {
             jsonObject.put(Keys.MSG, langPropsService.get("updateSuccLabel"));
         } catch (final ServiceException e) {
             LOGGER.log(Level.ERROR, e.getMessage(), e);
-
             jsonObject.put(Keys.STATUS_CODE, false);
             jsonObject.put(Keys.MSG, langPropsService.get("removeFailLabel"));
         }

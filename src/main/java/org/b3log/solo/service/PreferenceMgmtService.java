@@ -2,25 +2,21 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.service;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.Transaction;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.service.ServiceException;
@@ -28,6 +24,8 @@ import org.b3log.latke.service.annotation.Service;
 import org.b3log.latke.util.Locales;
 import org.b3log.solo.model.Option;
 import org.b3log.solo.repository.OptionRepository;
+import org.b3log.solo.util.Markdowns;
+import org.b3log.solo.util.Statics;
 import org.json.JSONObject;
 
 import java.util.Iterator;
@@ -37,7 +35,7 @@ import java.util.Locale;
  * Preference management service.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.4.0.2, Aug 18, 2019
+ * @version 1.4.0.8, May 20, 2020
  * @since 0.4.0
  */
 @Service
@@ -46,7 +44,7 @@ public class PreferenceMgmtService {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(PreferenceMgmtService.class);
+    private static final Logger LOGGER = LogManager.getLogger(PreferenceMgmtService.class);
 
     /**
      * Option query service.
@@ -82,7 +80,6 @@ public class PreferenceMgmtService {
         }
 
         final Transaction transaction = optionRepository.beginTransaction();
-
         try {
             preference.put(Option.ID_C_SIGNS, preference.get(Option.ID_C_SIGNS).toString());
 
@@ -210,6 +207,9 @@ public class PreferenceMgmtService {
             syncGitHubOpt.put(Option.OPTION_VALUE, preference.optString(Option.ID_C_SYNC_GITHUB));
             optionRepository.update(Option.ID_C_SYNC_GITHUB, syncGitHubOpt);
 
+            final String githubPATVal = preference.optString(Option.ID_C_GITHUB_PAT);
+            emptyPreferenceOptSave(Option.ID_C_GITHUB_PAT, githubPATVal);
+
             final JSONObject pullGitHubOpt = optionRepository.get(Option.ID_C_PULL_GITHUB);
             pullGitHubOpt.put(Option.OPTION_VALUE, preference.optString(Option.ID_C_PULL_GITHUB));
             optionRepository.update(Option.ID_C_PULL_GITHUB, pullGitHubOpt);
@@ -218,11 +218,45 @@ public class PreferenceMgmtService {
             hljsThemeOpt.put(Option.OPTION_VALUE, preference.optString(Option.ID_C_HLJS_THEME));
             optionRepository.update(Option.ID_C_HLJS_THEME, hljsThemeOpt);
 
+            final String showCodeBlockLnVal = preference.optString(Option.ID_C_SHOW_CODE_BLOCK_LN);
+            emptyPreferenceOptSave(Option.ID_C_SHOW_CODE_BLOCK_LN, showCodeBlockLnVal);
+            Markdowns.SHOW_CODE_BLOCK_LN = "true".equalsIgnoreCase(showCodeBlockLnVal);
+
             final JSONObject customVarsOpt = optionRepository.get(Option.ID_C_CUSTOM_VARS);
             customVarsOpt.put(Option.OPTION_VALUE, preference.optString(Option.ID_C_CUSTOM_VARS));
             optionRepository.update(Option.ID_C_CUSTOM_VARS, customVarsOpt);
 
+            final String footnotesVal = preference.optString(Option.ID_C_FOOTNOTES);
+            emptyPreferenceOptSave(Option.ID_C_FOOTNOTES, footnotesVal);
+            Markdowns.FOOTNOTES = "true".equalsIgnoreCase(footnotesVal);
+
+            final String showToCVal = preference.optString(Option.ID_C_SHOW_TOC);
+            emptyPreferenceOptSave(Option.ID_C_SHOW_TOC, showToCVal);
+            Markdowns.SHOW_TOC = "true".equalsIgnoreCase(showToCVal);
+
+            final String autoSpaceVal = preference.optString(Option.ID_C_AUTO_SPACE);
+            emptyPreferenceOptSave(Option.ID_C_AUTO_SPACE, autoSpaceVal);
+            Markdowns.AUTO_SPACE = "true".equalsIgnoreCase(autoSpaceVal);
+
+            final String fixTermTypoVal = preference.optString(Option.ID_C_FIX_TERM_TYPO);
+            emptyPreferenceOptSave(Option.ID_C_FIX_TERM_TYPO, fixTermTypoVal);
+            Markdowns.FIX_TERM_TYPO = "true".equalsIgnoreCase(fixTermTypoVal);
+
+            final String chinesePunctVal = preference.optString(Option.ID_C_CHINESE_PUNCT);
+            emptyPreferenceOptSave(Option.ID_C_CHINESE_PUNCT, chinesePunctVal);
+            Markdowns.CHINESE_PUNCT = "true".equalsIgnoreCase(chinesePunctVal);
+
+            final String IMADAOMVal = preference.optString(Option.ID_C_IMADAOM);
+            emptyPreferenceOptSave(Option.ID_C_IMADAOM, IMADAOMVal);
+            Markdowns.IMADAOM = "true".equalsIgnoreCase(IMADAOMVal);
+
+            final String editorModeVal = preference.optString(Option.ID_C_EDITOR_MODE);
+            emptyPreferenceOptSave(Option.ID_C_EDITOR_MODE, editorModeVal);
+
             transaction.commit();
+
+            Markdowns.clearCache();
+            Statics.clear();
         } catch (final Exception e) {
             if (transaction.isActive()) {
                 transaction.rollback();
@@ -233,5 +267,21 @@ public class PreferenceMgmtService {
         }
 
         LOGGER.log(Level.DEBUG, "Updates preference successfully");
+    }
+
+    private void emptyPreferenceOptSave(final String optID, final String val) throws Exception {
+        // 该方法用于向后兼容，如果数据库中不存在该配置项则创建再保存
+
+        JSONObject opt = optionRepository.get(optID);
+        if (null == opt) {
+            opt = new JSONObject();
+            opt.put(Keys.OBJECT_ID, optID);
+            opt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+            opt.put(Option.OPTION_VALUE, val);
+            optionRepository.add(opt);
+        } else {
+            opt.put(Option.OPTION_VALUE, val);
+            optionRepository.update(optID, opt);
+        }
     }
 }

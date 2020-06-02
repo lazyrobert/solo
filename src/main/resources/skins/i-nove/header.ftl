@@ -3,23 +3,17 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <div class="header">
     <h1 class="title">
-        <a href="${servePath}" id="logoTitle" >
+        <a href="${servePath}" id="logoTitle">
             ${blogTitle}
         </a>
     </h1>
@@ -32,11 +26,11 @@
                 <a rel="nofollow" class="home" href="${servePath}"></a>
             </li>
             <#list pageNavigations as page>
-            <li>
-                <a href="${page.pagePermalink}" target="${page.pageOpenTarget}">
-                    <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}"></#if>${page.pageTitle}
-                </a>
-            </li>
+                <li>
+                    <a href="${page.pagePermalink}" target="${page.pageOpenTarget}">
+                        <#if page.pageIcon != ''><img class="page-icon" src="${page.pageIcon}" alt="${page.pageTitle}"></#if>${page.pageTitle}
+                    </a>
+                </li>
             </#list>
             <li>
                 <a href="${servePath}/tags.html">${allTagsLabel}</a>
@@ -47,11 +41,13 @@
                     <img src="${staticServePath}/images/feed.png" alt="RSS"/>
                 </a>
             </li>
-            <li>
-                <a href="${servePath}/search?keyword=">
-                    Search
-                </a>
-            </li>
+            <#if !staticSite>
+                <li>
+                    <a href="${servePath}/search?keyword=">
+                        Search
+                    </a>
+                </li>
+            </#if>
             <li>
                 <a class="lastNavi" href="javascript:void(0);"></a>
             </li>
@@ -61,7 +57,7 @@
         <span>
             ${viewCount1Label}
             <span class='error-msg'>
-                ${statistic.statisticBlogViewCount}
+                <span data-uvstaturl="${servePath}">${statistic.statisticBlogViewCount}</span>
             </span>
             &nbsp;&nbsp;
         </span>
@@ -71,12 +67,6 @@
                 ${statistic.statisticPublishedBlogArticleCount}
             </span>
             &nbsp;&nbsp;
-        </span>
-        <span>
-            ${commentCount1Label}
-            <span class='error-msg'>
-                ${statistic.statisticPublishedBlogCommentCount}
-            </span>
         </span>
     </div>
     <div class="clear"></div>

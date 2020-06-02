@@ -3,18 +3,12 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <#list articles as article>
@@ -48,9 +42,11 @@
             </#list>
             </span>
             <div class="fn__right">
-                <a class="ft__red" href="${servePath}${article.articlePermalink}#comments"><#if article.articleCommentCount gt 0>${article.articleCommentCount} </#if>${commentLabel}</a>
+            <#if commentable>
+                <a class="ft__red" href="${servePath}${article.articlePermalink}#b3logsolocomments"><span data-uvstatcmt="${article.oId}">${article.articleCommentCount}</span> ${commentLabel}</a>
                 •
-                <a class="ft__red" href="${servePath}${article.articlePermalink}">${article.articleViewCount} ${viewLabel}</a>
+            </#if>
+                <a class="ft__red" href="${servePath}${article.articlePermalink}"><span data-uvstaturl="${servePath}${article.articlePermalink}">${article.articleViewCount}</span> ${viewLabel}</a>
             </div>
         </div>
         <div class="vditor-reset article__content">
@@ -64,7 +60,7 @@
 <#if 0 != paginationPageCount>
     <nav class="fn__flex pagination">
         <#if 1 != paginationPageNums?first>
-            <a href="${servePath}${path}?p=${paginationPreviousPageNum}" class="pagination__item fn__flex-center">&laquo; Prev</a>
+            <a href="${servePath}${path}${pagingSep}${paginationPreviousPageNum}" class="pagination__item fn__flex-center">&laquo; Prev</a>
         </#if>
 
         <div class="fn__flex-1 ft__center">
@@ -77,18 +73,18 @@
             <span class="pagination__item pagination__item--current">${paginationPageNum}</span>
             <#else>
             <a class="pagination__item"
-               href="${servePath}${path}?p=${paginationPageNum}">${paginationPageNum}</a>
+               href="${servePath}${path}${pagingSep}${paginationPageNum}">${paginationPageNum}</a>
             </#if>
         </#list>
         <#if paginationPageNums?last != paginationPageCount>
             <span class="pagination__item">...</span>
-            <a href="${servePath}${path}?p=${paginationPageCount}"
+            <a href="${servePath}${path}${pagingSep}${paginationPageCount}"
                class="pagination__item">${paginationPageCount}</a>
         </#if>
         </div>
 
         <#if paginationPageNums?last != paginationPageCount>
-            <a href="${servePath}${path}?p=${paginationNextPageNum}" class="pagination__item fn__flex-center">Next &raquo;</a>
+            <a href="${servePath}${path}${pagingSep}${paginationNextPageNum}" class="pagination__item fn__flex-center">Next &raquo;</a>
         </#if>
     </nav>
 </#if>

@@ -2,30 +2,24 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.repository;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.*;
 import org.b3log.latke.repository.annotation.Repository;
 import org.b3log.solo.cache.ArticleCache;
 import org.b3log.solo.model.Article;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -36,7 +30,7 @@ import java.util.List;
  * Article repository.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.1.1.13, Jun 6, 2019
+ * @version 1.1.1.14, Jan 16, 2020
  * @since 0.3.1
  */
 @Repository
@@ -45,7 +39,7 @@ public class ArticleRepository extends AbstractRepository {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(ArticleRepository.class);
+    private static final Logger LOGGER = LogManager.getLogger(ArticleRepository.class);
 
     /**
      * Random range.
@@ -107,7 +101,7 @@ public class ArticleRepository extends AbstractRepository {
 
         final double mid = Math.random() + RANDOM_RANGE;
 
-        LOGGER.log(Level.TRACE, "Random mid[{0}]", mid);
+        LOGGER.log(Level.TRACE, "Random mid[{}]", mid);
 
         Query query = new Query().setFilter(CompositeFilterOperator.and(
                 new PropertyFilter(Article.ARTICLE_RANDOM_DOUBLE, FilterOperator.GREATER_THAN_OR_EQUAL, mid),
@@ -162,7 +156,6 @@ public class ArticleRepository extends AbstractRepository {
                         new PropertyFilter(Article.ARTICLE_STATUS, FilterOperator.EQUAL, Article.ARTICLE_STATUS_C_PUBLISHED))).
                 addSort(Article.ARTICLE_UPDATED, SortDirection.DESCENDING).addSort(Article.ARTICLE_PUT_TOP, SortDirection.DESCENDING).
                 setPage(currentPageNum, pageSize);
-
         return get(query);
     }
 
@@ -182,16 +175,12 @@ public class ArticleRepository extends AbstractRepository {
         final Query query = new Query().
                 setFilter(new PropertyFilter(Article.ARTICLE_PERMALINK, FilterOperator.EQUAL, permalink)).
                 setPageCount(1);
-
-        final JSONObject result = get(query);
-        final JSONArray array = result.optJSONArray(Keys.RESULTS);
-        if (0 == array.length()) {
+        ret = getFirst(query);
+        if (null == ret) {
             return null;
         }
 
-        ret = array.optJSONObject(0);
         articleCache.putArticle(ret);
-
         return ret;
     }
 
@@ -207,40 +196,6 @@ public class ArticleRepository extends AbstractRepository {
                 setFilter(new PropertyFilter(Article.ARTICLE_STATUS, FilterOperator.EQUAL, Article.ARTICLE_STATUS_C_PUBLISHED)).
                 addSort(Article.ARTICLE_UPDATED, SortDirection.DESCENDING).
                 setPage(1, fetchSize).setPageCount(1);
-
-        return getList(query);
-    }
-
-    /**
-     * Gets most commented and published articles with the specified number.
-     *
-     * @param num the specified number
-     * @return a list of most comment articles, returns an empty list if not found
-     * @throws RepositoryException repository exception
-     */
-    public List<JSONObject> getMostCommentArticles(final int num) throws RepositoryException {
-        final Query query = new Query().
-                addSort(Article.ARTICLE_COMMENT_COUNT, SortDirection.DESCENDING).
-                addSort(Article.ARTICLE_UPDATED, SortDirection.DESCENDING).
-                setFilter(new PropertyFilter(Article.ARTICLE_STATUS, FilterOperator.EQUAL, Article.ARTICLE_STATUS_C_PUBLISHED)).
-                setPage(1, num).setPageCount(1);
-
-        return getList(query);
-    }
-
-    /**
-     * Gets most view count and published articles with the specified number.
-     *
-     * @param num the specified number
-     * @return a list of most view count articles, returns an empty list if not found
-     * @throws RepositoryException repository exception
-     */
-    public List<JSONObject> getMostViewCountArticles(final int num) throws RepositoryException {
-        final Query query = new Query().
-                addSort(Article.ARTICLE_VIEW_COUNT, SortDirection.DESCENDING).
-                addSort(Article.ARTICLE_UPDATED, SortDirection.DESCENDING).
-                setFilter(new PropertyFilter(Article.ARTICLE_STATUS, FilterOperator.EQUAL, Article.ARTICLE_STATUS_C_PUBLISHED)).
-                setPage(1, num).setPageCount(1);
 
         return getList(query);
     }
@@ -275,16 +230,12 @@ public class ArticleRepository extends AbstractRepository {
                 addSort(Article.ARTICLE_CREATED, SortDirection.DESCENDING).
                 setPage(1, 1).setPageCount(1).
                 select(Article.ARTICLE_TITLE, Article.ARTICLE_PERMALINK, Article.ARTICLE_ABSTRACT);
-
-        final JSONObject result = get(query);
-        final JSONArray array = result.optJSONArray(Keys.RESULTS);
-        if (1 != array.length()) {
+        final JSONObject article = getFirst(query);
+        if (null == article) {
             return null;
         }
 
         final JSONObject ret = new JSONObject();
-        final JSONObject article = array.optJSONObject(0);
-
         try {
             ret.put(Article.ARTICLE_TITLE, article.getString(Article.ARTICLE_TITLE));
             ret.put(Article.ARTICLE_PERMALINK, article.getString(Article.ARTICLE_PERMALINK));
@@ -292,7 +243,6 @@ public class ArticleRepository extends AbstractRepository {
         } catch (final JSONException e) {
             throw new RepositoryException(e);
         }
-
         return ret;
     }
 
@@ -326,16 +276,12 @@ public class ArticleRepository extends AbstractRepository {
                 addSort(Article.ARTICLE_CREATED, SortDirection.ASCENDING).
                 setPage(1, 1).setPageCount(1).
                 select(Article.ARTICLE_TITLE, Article.ARTICLE_PERMALINK, Article.ARTICLE_ABSTRACT);
-
-        final JSONObject result = get(query);
-        final JSONArray array = result.optJSONArray(Keys.RESULTS);
-        if (1 != array.length()) {
+        final JSONObject article = getFirst(query);
+        if (null == article) {
             return null;
         }
 
         final JSONObject ret = new JSONObject();
-        final JSONObject article = array.optJSONObject(0);
-
         try {
             ret.put(Article.ARTICLE_TITLE, article.getString(Article.ARTICLE_TITLE));
             ret.put(Article.ARTICLE_PERMALINK, article.getString(Article.ARTICLE_PERMALINK));
@@ -343,7 +289,6 @@ public class ArticleRepository extends AbstractRepository {
         } catch (final JSONException e) {
             throw new RepositoryException(e);
         }
-
         return ret;
     }
 

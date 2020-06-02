@@ -2,32 +2,26 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.processor.console;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.http.RequestContext;
-import org.b3log.latke.http.annotation.Before;
-import org.b3log.latke.http.annotation.RequestProcessor;
 import org.b3log.latke.http.renderer.JsonRenderer;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.service.ServiceException;
 import org.b3log.latke.util.URLs;
@@ -38,7 +32,6 @@ import org.b3log.solo.service.CategoryMgmtService;
 import org.b3log.solo.service.CategoryQueryService;
 import org.b3log.solo.service.TagQueryService;
 import org.b3log.solo.util.Solos;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -51,17 +44,16 @@ import java.util.Set;
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://hacpai.com/member/lzh984294471">lzh984294471</a>
- * @version 1.1.3.6, Sep 1, 2019
+ * @version 2.0.0.1, Feb 27, 2020
  * @since 2.0.0
  */
-@RequestProcessor
-@Before(ConsoleAdminAuthAdvice.class)
+@Singleton
 public class CategoryConsole {
 
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(CategoryConsole.class);
+    private static final Logger LOGGER = LogManager.getLogger(CategoryConsole.class);
 
     /**
      * Category management service.
@@ -163,7 +155,6 @@ public class CategoryConsole {
             final JSONObject result = categoryQueryService.getCategory(categoryId);
             if (null == result) {
                 renderer.setJSONObject(new JSONObject().put(Keys.STATUS_CODE, false));
-
                 return;
             }
 
@@ -231,7 +222,7 @@ public class CategoryConsole {
      * {
      *     "oId": "",
      *     "categoryTitle": "",
-     *     "categoryURI": "", // optional
+     *     "categoryURI": "",
      *     "categoryDescription": "", // optional
      *     "categoryTags": "tag1, tag2" // optional
      * }
@@ -280,7 +271,6 @@ public class CategoryConsole {
                     final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                     renderer.setJSONObject(jsonObject);
                     jsonObject.put(Keys.MSG, addArticleWithTagFirstLabel);
-
                     return;
                 }
 
@@ -299,28 +289,28 @@ public class CategoryConsole {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("duplicatedCategoryLabel"));
-
                 return;
             }
 
-            String uri = requestJSON.optString(Category.CATEGORY_URI, title);
-            if (StringUtils.isBlank(uri)) {
-                uri = title;
+            final String uri = requestJSON.optString(Category.CATEGORY_URI);
+            if (StringUtils.isBlank(uri) || !uri.equals(URLs.encode(uri))) {
+                final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
+                renderer.setJSONObject(jsonObject);
+                jsonObject.put(Keys.MSG, langPropsService.get("categoryURIMustBeASCIILabel"));
+                return;
             }
-            uri = URLs.encode(uri);
+
             mayExist = categoryQueryService.getByURI(uri);
             if (null != mayExist && !mayExist.optString(Keys.OBJECT_ID).equals(categoryId)) {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("duplicatedCategoryURILabel"));
-
                 return;
             }
             if (255 <= StringUtils.length(uri)) {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("categoryURITooLongLabel"));
-
                 return;
             }
 
@@ -362,7 +352,7 @@ public class CategoryConsole {
      * <pre>
      * {
      *     "categoryTitle": "",
-     *     "categoryURI": "", // optional
+     *     "categoryURI": "",
      *     "categoryDescription": "", // optional
      *     "categoryTags": "tag1, tag2" // optional
      * }
@@ -412,7 +402,6 @@ public class CategoryConsole {
                     final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                     renderer.setJSONObject(jsonObject);
                     jsonObject.put(Keys.MSG, addArticleWithTagFirstLabel);
-
                     return;
                 }
 
@@ -430,28 +419,27 @@ public class CategoryConsole {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("duplicatedCategoryLabel"));
-
                 return;
             }
 
-            String uri = requestJSONObject.optString(Category.CATEGORY_URI, title);
-            if (StringUtils.isBlank(uri)) {
-                uri = title;
+            final String uri = requestJSONObject.optString(Category.CATEGORY_URI);
+            if (StringUtils.isBlank(uri) || !uri.equals(URLs.encode(uri))) {
+                final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
+                renderer.setJSONObject(jsonObject);
+                jsonObject.put(Keys.MSG, langPropsService.get("categoryURIMustBeASCIILabel"));
+                return;
             }
-            uri = URLs.encode(uri);
             mayExist = categoryQueryService.getByURI(uri);
             if (null != mayExist) {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("duplicatedCategoryURILabel"));
-
                 return;
             }
             if (255 <= StringUtils.length(uri)) {
                 final JSONObject jsonObject = new JSONObject().put(Keys.STATUS_CODE, false);
                 renderer.setJSONObject(jsonObject);
                 jsonObject.put(Keys.MSG, langPropsService.get("categoryURITooLongLabel"));
-
                 return;
             }
 
@@ -523,9 +511,8 @@ public class CategoryConsole {
             result.put(Keys.STATUS_CODE, true);
             renderer.setJSONObject(result);
 
-            final JSONArray categories = result.optJSONArray(Category.CATEGORIES);
-            for (int i = 0; i < categories.length(); i++) {
-                final JSONObject category = categories.optJSONObject(i);
+            final List<JSONObject> categories = (List<JSONObject>) result.opt(Category.CATEGORIES);
+            for (final JSONObject category : categories) {
                 String title = category.optString(Category.CATEGORY_TITLE);
                 title = StringEscapeUtils.escapeXml(title);
                 category.put(Category.CATEGORY_TITLE, title);

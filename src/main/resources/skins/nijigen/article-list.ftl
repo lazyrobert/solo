@@ -3,18 +3,12 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <div class="article-list">
@@ -56,12 +50,14 @@
                 ${articleTag}</a><#if articleTag_has_next>,</#if>
                 </#list>
             </span>
-            <a class="tag" href="${servePath}${article.articlePermalink}#comments">
-                <i class="icon__comments"></i> ${article.articleCommentCount} ${commentLabel}
+            <#if commentable>
+            <a class="tag" href="${servePath}${article.articlePermalink}#b3logsolocomments">
+                <i class="icon__comments"></i> <span data-uvstatcmt="${article.oId}">${article.articleCommentCount}</span> ${commentLabel}
             </a>
+            </#if>
             <span class="tag">
                 <i class="icon__views"></i>
-                ${article.articleViewCount} ${viewLabel}
+                <span data-uvstaturl="${servePath}${article.articlePermalink}">${article.articleViewCount}</span> ${viewLabel}
             </span>
         </div>
 
@@ -76,7 +72,7 @@
         <div class="fn__clear">
             <nav class="pagination fn__right">
                 <#if 1 != paginationPageNums?first>
-                    <a href="${servePath}${path}?p=${paginationPreviousPageNum}" class="pagination__item">&laquo;</a>
+                    <a href="${servePath}${path}${pagingSep}${paginationPreviousPageNum}" class="pagination__item">&laquo;</a>
                     <a class="pagination__item" href="${servePath}${path}">1</a>
                     <span class="pagination__item pagination__item--text">...</span>
                 </#if>
@@ -84,13 +80,13 @@
                     <#if paginationPageNum == paginationCurrentPageNum>
                     <span class="pagination__item pagination__item--current">${paginationPageNum}</span>
                     <#else>
-                    <a class="pagination__item" href="${servePath}${path}?p=${paginationPageNum}">${paginationPageNum}</a>
+                    <a class="pagination__item" href="${servePath}${path}${pagingSep}${paginationPageNum}">${paginationPageNum}</a>
                     </#if>
                 </#list>
                 <#if paginationPageNums?last != paginationPageCount>
                     <span class="pagination__item pagination__item--text">...</span>
-                    <a href="${servePath}${path}?p=${paginationPageCount}" class="pagination__item">${paginationPageCount}</a>
-                    <a href="${servePath}${path}?p=${paginationNextPageNum}" class="pagination__item">&raquo;</a>
+                    <a href="${servePath}${path}${pagingSep}${paginationPageCount}" class="pagination__item">${paginationPageCount}</a>
+                    <a href="${servePath}${path}${pagingSep}${paginationNextPageNum}" class="pagination__item">&raquo;</a>
                 </#if>
             </nav>
         </div>

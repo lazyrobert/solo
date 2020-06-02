@@ -2,18 +2,12 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.util;
 
@@ -27,10 +21,11 @@ import com.vladsch.flexmark.util.data.MutableDataSet;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.ioc.BeanManager;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.util.Callstacks;
 import org.b3log.latke.util.Stopwatchs;
@@ -47,6 +42,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -58,7 +54,7 @@ import java.util.concurrent.*;
  * </p>
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 2.3.1.10, Sep 23, 2019
+ * @version 2.3.1.16, Apr 12, 2020
  * @since 0.4.5
  */
 public final class Markdowns {
@@ -66,7 +62,7 @@ public final class Markdowns {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(Markdowns.class);
+    private static final Logger LOGGER = LogManager.getLogger(Markdowns.class);
 
     /**
      * Markdown cache.
@@ -109,6 +105,21 @@ public final class Markdowns {
      * Whether Lute is available.
      */
     public static boolean LUTE_AVAILABLE;
+
+    public static boolean SHOW_CODE_BLOCK_LN = false;
+    public static boolean FOOTNOTES = false;
+    public static boolean SHOW_TOC = false;
+    public static boolean AUTO_SPACE = false;
+    public static boolean FIX_TERM_TYPO = false;
+    public static boolean CHINESE_PUNCT = false;
+    public static boolean IMADAOM = false;
+
+    /**
+     * Clears cache.
+     */
+    public static void clearCache() {
+        MD_CACHE.clear();
+    }
 
     /**
      * Cleans the specified HTML.
@@ -164,10 +175,6 @@ public final class Markdowns {
                 html = toHtmlByFlexmark(markdownText);
             }
 
-            if (!StringUtils.startsWith(html, "<p>")) {
-                html = "<p>" + html + "</p>";
-            }
-
             final Document doc = Jsoup.parse(html);
             doc.select("a").forEach(a -> {
                 final String src = a.attr("href");
@@ -218,10 +225,10 @@ public final class Markdowns {
             toRemove.forEach(Node::remove);
 
             doc.outputSettings().prettyPrint(false);
+            Images.qiniuImgProcessing(doc);
 
             String ret = doc.select("body").html();
             ret = StringUtils.trim(ret);
-            ret = Images.qiniuImgProcessing(ret);
 
             // cache it
             putHTML(markdownText, ret);
@@ -242,7 +249,6 @@ public final class Markdowns {
             for (final Thread thread : threads) {
                 if (thread.getId() == threadId[0]) {
                     thread.stop();
-
                     break;
                 }
             }
@@ -260,8 +266,15 @@ public final class Markdowns {
     private static String toHtmlByLute(final String markdownText) throws Exception {
         final URL url = new URL(LUTE_ENGINE_URL);
         final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestProperty("X-CodeSyntaxHighlightLineNum", String.valueOf(Markdowns.SHOW_CODE_BLOCK_LN));
+        conn.setRequestProperty("X-Footnotes", String.valueOf(Markdowns.FOOTNOTES));
+        conn.setRequestProperty("X-ToC", String.valueOf(Markdowns.SHOW_TOC));
+        conn.setRequestProperty("X-AutoSpace", String.valueOf(Markdowns.AUTO_SPACE));
+        conn.setRequestProperty("X-FixTermTypo", String.valueOf(Markdowns.FIX_TERM_TYPO));
+        conn.setRequestProperty("X-ChinesePunct", String.valueOf(Markdowns.CHINESE_PUNCT));
+        conn.setRequestProperty("X-IMADAOM", String.valueOf(Markdowns.IMADAOM));
         conn.setConnectTimeout(100);
-        conn.setReadTimeout(1000);
+        conn.setReadTimeout(3000);
         conn.setDoOutput(true);
 
         try (final OutputStream outputStream = conn.getOutputStream()) {
@@ -270,7 +283,7 @@ public final class Markdowns {
 
         String ret;
         try (final InputStream inputStream = conn.getInputStream()) {
-            ret = IOUtils.toString(inputStream, "UTF-8");
+            ret = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
         }
 
         conn.disconnect();

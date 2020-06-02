@@ -3,18 +3,12 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <section class="posts-expand">
@@ -50,12 +44,14 @@
                         ${article.articleUpdateDate?string("yyyy-MM-dd")}
                     </time>
                 </span>
-                    <span>
+                <#if commentable>
+                <span>
                     &nbsp; | &nbsp;
-                    <a href="${servePath}${article.articlePermalink}#comments">
-                        ${article.articleCommentCount} ${cmtLabel}</a>
+                    <a href="${servePath}${article.articlePermalink}#b3logsolocomments">
+                       <span data-uvstatcmt="${article.oId}">${article.articleCommentCount}</span> ${cmtLabel}</a>
                 </span>
-                    &nbsp; | &nbsp;${viewsLabel} ${article.articleViewCount}°C
+                </#if>
+                    &nbsp; | &nbsp;${viewsLabel} <span data-uvstaturl="${servePath}${article.articlePermalink}">${article.articleViewCount}</span>°C
                 </div>
             </header>
             <div class="vditor-reset">
@@ -73,19 +69,19 @@
 <#if 0 != paginationPageCount>
     <nav class="pagination">
         <#if 1 != paginationPageNums?first>
-            <a href="${servePath}${path}?p=${paginationPreviousPageNum}" class="extend next"><<</a>
+            <a href="${servePath}${path}${pagingSep}${paginationPreviousPageNum}" class="extend next"><<</a>
             <a class="page-number" href="${servePath}${path}">1</a> ...
         </#if>
         <#list paginationPageNums as paginationPageNum>
             <#if paginationPageNum == paginationCurrentPageNum>
                 <span class="page-number current">${paginationPageNum}</span>
             <#else>
-                <a class="page-number" href="${servePath}${path}?p=${paginationPageNum}">${paginationPageNum}</a>
+                <a class="page-number" href="${servePath}${path}${pagingSep}${paginationPageNum}">${paginationPageNum}</a>
             </#if>
         </#list>
         <#if paginationPageNums?last != paginationPageCount> ...
-            <a href="${servePath}${path}?p=${paginationPageCount}" class="page-number">${paginationPageCount}</a>
-            <a href="${servePath}${path}?p=${paginationNextPageNum}" class="extend next">>></a>
+            <a href="${servePath}${path}${pagingSep}${paginationPageCount}" class="page-number">${paginationPageCount}</a>
+            <a href="${servePath}${path}${pagingSep}${paginationNextPageNum}" class="extend next">>></a>
         </#if>
     </nav>
 </#if>

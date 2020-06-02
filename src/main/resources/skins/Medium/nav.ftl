@@ -3,18 +3,12 @@
     Solo - A small and beautiful blogging system written in Java.
     Copyright (c) 2010-present, b3log.org
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Solo is licensed under Mulan PSL v2.
+    You can use this software according to the terms and conditions of the Mulan PSL v2.
+    You may obtain a copy of Mulan PSL v2 at:
+            http://license.coscl.org.cn/MulanPSL2
+    THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+    See the Mulan PSL v2 for more details.
 
 -->
 <nav id="headerNav" class="header__nav">
@@ -23,7 +17,7 @@
             <svg>
                 <use xlink:href="#icon-home"></use>
             </svg>
-        ${indexLabel}
+            ${indexLabel}
         </a>
         <a href="${servePath}/tags.html" rel="section">
             <svg>
@@ -36,11 +30,11 @@
             </svg> ${archiveLabel}
         </a>
 
-    <#list pageNavigations as page>
-        <a href="${page.pagePermalink}" target="${page.pageOpenTarget}" rel="section">
-            <#if page.pageIcon != ''><img src="${page.pageIcon}"></#if> ${page.pageTitle}
-        </a>
-    </#list>
+        <#list pageNavigations as page>
+            <a href="${page.pagePermalink}" target="${page.pageOpenTarget}" rel="section">
+                <#if page.pageIcon != ''><img src="${page.pageIcon}" alt="${page.pageTitle} "></#if> ${page.pageTitle}
+            </a>
+        </#list>
 
         <a rel="archive" href="${servePath}/links.html">
             <svg>
@@ -54,25 +48,27 @@
             </svg>
             RSS
         </a>
-    <#if isLoggedIn>
-        <a href="${servePath}/admin-index.do#main">
-            <svg>
-                <use xlink:href="#icon-setting"></use>
-            </svg> ${adminLabel}
-        </a>
-        <a href="${logoutURL}">
-            <svg>
-                <use xlink:href="#icon-out"></use>
-            </svg>
-            ${logoutLabel}
-        </a>
-    <#else>
-        <a rel="alternate" href="${servePath}/start" rel="section">
-            <svg>
-                <use xlink:href="#icon-enter"></use>
-            </svg>
-            ${startToUseLabel}
-        </a>
-    </#if>
+        <#if !staticSite>
+            <#if isLoggedIn>
+                <a href="${servePath}/admin-index.do#main">
+                    <svg>
+                        <use xlink:href="#icon-setting"></use>
+                    </svg> ${adminLabel}
+                </a>
+                <a href="${logoutURL}">
+                    <svg>
+                        <use xlink:href="#icon-out"></use>
+                    </svg>
+                    ${logoutLabel}
+                </a>
+            <#else>
+                <a rel="alternate" href="${servePath}/start" rel="section">
+                    <svg>
+                        <use xlink:href="#icon-enter"></use>
+                    </svg>
+                    ${startToUseLabel}
+                </a>
+            </#if>
+        </#if>
     </div>
 </nav>

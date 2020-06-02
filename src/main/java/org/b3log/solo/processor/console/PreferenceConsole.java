@@ -2,29 +2,23 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.processor.console;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.http.RequestContext;
-import org.b3log.latke.http.annotation.Before;
-import org.b3log.latke.http.annotation.RequestProcessor;
 import org.b3log.latke.http.renderer.JsonRenderer;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.latke.service.ServiceException;
 import org.b3log.solo.model.Option;
@@ -39,18 +33,17 @@ import org.json.JSONObject;
  * Preference console request processing.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @author <a href="https://github.com/hzchendou">hzchendou</a>
- * @version 1.2.0.25, Jun 13, 2019
+ * @author <a href="https://hacpai.com/member/hzchendou">hzchendou</a>
+ * @version 2.0.0.1, Apr 6, 2020
  * @since 0.4.0
  */
-@RequestProcessor
-@Before(ConsoleAdminAuthAdvice.class)
+@Singleton
 public class PreferenceConsole {
 
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(PreferenceConsole.class);
+    private static final Logger LOGGER = LogManager.getLogger(PreferenceConsole.class);
 
     /**
      * Preference management service.
@@ -165,6 +158,14 @@ public class PreferenceConsole {
      *         "syncGitHub": boolean,
      *         "pullGitHub": boolean,
      *         "customVars" "", // 支持配置自定义参数 https://github.com/b3log/solo/issues/12535
+     *         "showCodeBlockLn": boolean, // 支持代码块行号显示 https://github.com/88250/solo/issues/4
+     *         "footnotes": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "showToC": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "autoSpace": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "fixTermTypo": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "chinesePunct": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "inlineMathAllowDigitAfterOpenMarker": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "editorMode": "", // 支持配置编辑器模式 https://github.com/88250/solo/issues/95
      *     }
      * }
      * </pre>
@@ -180,7 +181,6 @@ public class PreferenceConsole {
             final JSONObject preference = optionQueryService.getPreference();
             if (null == preference) {
                 renderer.setJSONObject(new JSONObject().put(Keys.STATUS_CODE, false));
-
                 return;
             }
 
@@ -242,7 +242,15 @@ public class PreferenceConsole {
      *         "faviconURL": "",
      *         "syncGitHub": boolean,
      *         "pullGitHub": boolean,
-     *         "customVars" "", // 支持配置自定义参数 https://github.com/b3log/solo/issues/12535
+     *         "customVars": "", // 支持配置自定义参数 https://github.com/b3log/solo/issues/12535
+     *         "showCodeBlockLn": boolean, // 支持代码块行号显示 https://github.com/88250/solo/issues/4
+     *         "footnotes": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "showToC": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "autoSpace": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "fixTermTypo": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "chinesePunct": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "inlineMathAllowDigitAfterOpenMarker": boolean, // Markdown 支持改进 https://github.com/88250/solo/issues/54
+     *         "editorMode": "", // 支持配置编辑器模式 https://github.com/88250/solo/issues/95
      *     }
      * }
      * </pre>

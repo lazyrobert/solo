@@ -2,30 +2,25 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.service;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.event.Event;
 import org.b3log.latke.event.EventManager;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.repository.RepositoryException;
 import org.b3log.latke.repository.Transaction;
 import org.b3log.latke.service.LangPropsService;
@@ -37,6 +32,7 @@ import org.b3log.solo.event.EventTypes;
 import org.b3log.solo.model.*;
 import org.b3log.solo.repository.*;
 import org.b3log.solo.util.GitHubs;
+import org.b3log.solo.util.Statics;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,7 +48,7 @@ import static org.b3log.solo.model.Article.*;
  * Article management service.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.3.4.0, Nov 7, 2019
+ * @version 1.3.4.1, Jan 8, 2020
  * @since 0.3.5
  */
 @Service
@@ -61,7 +57,7 @@ public class ArticleMgmtService {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(ArticleMgmtService.class);
+    private static final Logger LOGGER = LogManager.getLogger(ArticleMgmtService.class);
 
     /**
      * Article query service.
@@ -223,7 +219,6 @@ public class ArticleMgmtService {
             optionMgmtService.addOrUpdateOption(githubReposOpt);
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Updates github repos option failed", e);
-
             return;
         }
 
@@ -323,7 +318,7 @@ public class ArticleMgmtService {
             final JSONObject data = new JSONObject().put(ARTICLE, article);
             B3ArticleSender.pushArticleToRhy(data);
         } catch (final Exception e) {
-            LOGGER.log(Level.ERROR, "Pushes an article [id=" + articleId + "] to community failed", e);
+            LOGGER.log(Level.ERROR, "Pushes an article [id=" + articleId + "] to HacPai failed", e);
         }
     }
 
@@ -390,7 +385,7 @@ public class ArticleMgmtService {
                 transaction.rollback();
             }
 
-            LOGGER.log(Level.ERROR, "Can't put the article[oId{0}] to top", articleId);
+            LOGGER.log(Level.ERROR, "Can't put the article[oId{}] to top", articleId);
             throw new ServiceException(e);
         }
     }
@@ -476,6 +471,8 @@ public class ArticleMgmtService {
             }
 
             transaction.commit();
+
+            Statics.clear();
         } catch (final ServiceException e) {
             if (transaction.isActive()) {
                 transaction.rollback();
@@ -570,6 +567,8 @@ public class ArticleMgmtService {
             articleRepository.add(article);
             transaction.commit();
 
+            Statics.clear();
+
             article.put(Common.POST_TO_COMMUNITY, postToCommunity);
             if (Article.ARTICLE_STATUS_C_PUBLISHED == article.optInt(ARTICLE_STATUS)) {
                 final JSONObject eventData = new JSONObject();
@@ -601,6 +600,8 @@ public class ArticleMgmtService {
             articleRepository.remove(articleId);
             commentRepository.removeComments(articleId);
             transaction.commit();
+
+            Statics.clear();
         } catch (final Exception e) {
             if (transaction.isActive()) {
                 transaction.rollback();
@@ -637,45 +638,6 @@ public class ArticleMgmtService {
             }
 
             LOGGER.log(Level.WARN, "Updates article random value failed");
-
-            throw new ServiceException(e);
-        }
-    }
-
-    /**
-     * Increments the view count of the article specified by the given article id.
-     *
-     * @param articleId the given article id
-     * @throws ServiceException service exception
-     */
-    public void incViewCount(final String articleId) throws ServiceException {
-        JSONObject article;
-
-        try {
-            article = articleRepository.get(articleId);
-
-            if (null == article) {
-                return;
-            }
-        } catch (final RepositoryException e) {
-            LOGGER.log(Level.ERROR, "Gets article [id=" + articleId + "] failed", e);
-
-            return;
-        }
-
-        final Transaction transaction = articleRepository.beginTransaction();
-
-        try {
-            article.put(Article.ARTICLE_VIEW_COUNT, article.getInt(Article.ARTICLE_VIEW_COUNT) + 1);
-            articleRepository.update(articleId, article, ARTICLE_VIEW_COUNT);
-
-            transaction.commit();
-        } catch (final Exception e) {
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-
-            LOGGER.log(Level.WARN, "Updates article view count failed");
 
             throw new ServiceException(e);
         }
@@ -773,7 +735,7 @@ public class ArticleMgmtService {
             final String newTagTitle = newTag.getString(Tag.TAG_TITLE);
 
             if (!tagExists(newTagTitle, oldTags)) {
-                LOGGER.log(Level.DEBUG, "Tag need to add[title={0}]", newTagTitle);
+                LOGGER.log(Level.DEBUG, "Tag need to add[title={}]", newTagTitle);
                 tagsNeedToAdd.add(newTag);
             } else {
                 tagsUnchanged.add(newTag);
@@ -783,14 +745,14 @@ public class ArticleMgmtService {
             final String oldTagTitle = oldTag.getString(Tag.TAG_TITLE);
 
             if (!tagExists(oldTagTitle, newTags)) {
-                LOGGER.log(Level.DEBUG, "Tag dropped[title={0}]", oldTag);
+                LOGGER.log(Level.DEBUG, "Tag dropped[title={}]", oldTag);
                 tagsDropped.add(oldTag);
             } else {
                 tagsUnchanged.remove(oldTag);
             }
         }
 
-        LOGGER.log(Level.DEBUG, "Tags unchanged [{0}]", tagsUnchanged);
+        LOGGER.log(Level.DEBUG, "Tags unchanged [{}]", tagsUnchanged);
 
         final String[] tagIdsDropped = new String[tagsDropped.size()];
         for (int i = 0; i < tagIdsDropped.length; i++) {
@@ -885,7 +847,7 @@ public class ArticleMgmtService {
             String tagId;
 
             if (null == tag) {
-                LOGGER.log(Level.TRACE, "Found a new tag[title={0}] in article[title={1}]",
+                LOGGER.log(Level.TRACE, "Found a new tag[title={}] in article[title={}]",
                         tagTitle, article.optString(Article.ARTICLE_TITLE));
                 tag = new JSONObject();
                 tag.put(Tag.TAG_TITLE, tagTitle);
@@ -893,7 +855,7 @@ public class ArticleMgmtService {
                 tag.put(Keys.OBJECT_ID, tagId);
             } else {
                 tagId = tag.optString(Keys.OBJECT_ID);
-                LOGGER.log(Level.TRACE, "Found a existing tag[title={0}, id={1}] in article[title={2}]",
+                LOGGER.log(Level.TRACE, "Found a existing tag[title={}, id={}] in article[title={}]",
                         tag.optString(Tag.TAG_TITLE), tag.optString(Keys.OBJECT_ID), article.optString(Article.ARTICLE_TITLE));
                 final JSONObject tagTmp = new JSONObject();
                 tagTmp.put(Keys.OBJECT_ID, tagId);

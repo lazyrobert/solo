@@ -2,18 +2,12 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.util;
 
@@ -21,12 +15,13 @@ import jodd.http.HttpRequest;
 import jodd.http.HttpResponse;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.http.*;
 import org.b3log.latke.ioc.BeanManager;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.model.Pagination;
 import org.b3log.latke.model.Role;
 import org.b3log.latke.model.User;
@@ -38,15 +33,20 @@ import org.b3log.solo.model.Article;
 import org.b3log.solo.model.Common;
 import org.b3log.solo.model.UserExt;
 import org.b3log.solo.repository.UserRepository;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
+import java.util.List;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Solo utilities.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.9.0.4, Nov 18, 2019
+ * @version 1.10.0.0, Jan 11, 2020
  * @since 2.8.0
  */
 public final class Solos {
@@ -54,7 +54,7 @@ public final class Solos {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(Solos.class);
+    private static final Logger LOGGER = LogManager.getLogger(Solos.class);
 
     /**
      * Favicon API.
@@ -69,7 +69,7 @@ public final class Solos {
     /**
      * Cookie expiry in 30 days.
      */
-    private static final int COOKIE_EXPIRY = 60 * 60 * 24 * 30;
+    private static final int COOKIE_EXPIRY = 60 * 60 * 24 * 7;
 
     /**
      * Cookie name.
@@ -80,6 +80,11 @@ public final class Solos {
      * Cookie secret.
      */
     public static final String COOKIE_SECRET;
+
+    /**
+     * Indicates generating a static site.
+     */
+    public static boolean GEN_STATIC_SITE = false;
 
     static {
         ResourceBundle solo;
@@ -107,12 +112,51 @@ public final class Solos {
     }
 
     /**
+     * Blacklist IPs.
+     */
+    public static final List<String> BLACKLIST_IPS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Reloads blacklist IPs.
+     */
+    public static void reloadBlacklistIPs() {
+        try {
+            final HttpResponse res = HttpRequest.get("https://hacpai.com/apis/blacklist/ip").trustAllCerts(true).
+                    connectionTimeout(3000).timeout(7000).header("User-Agent", Solos.USER_AGENT).send();
+            if (200 != res.statusCode()) {
+                return;
+            }
+            res.charset("UTF-8");
+            final JSONObject result = new JSONObject(res.bodyText());
+            if (0 != result.optInt(Keys.CODE)) {
+                return;
+            }
+
+            final JSONArray ips = result.optJSONArray(Common.DATA);
+            BLACKLIST_IPS.clear();
+            BLACKLIST_IPS.addAll(CollectionUtils.jsonArrayToList(ips));
+        } catch (final Exception e) {
+            // ignored
+        }
+    }
+
+    /**
      * Constructs a successful result.
      *
      * @return result
      */
     public static JSONObject newSucc() {
         return new JSONObject().put(Keys.CODE, 0).put(Keys.MSG, "");
+    }
+
+    /**
+     * Checks whether Solo is running on the local server.
+     *
+     * @return {@code true} if it is, returns {@code false} otherwise
+     */
+    public static boolean isLocalServer() {
+        return StringUtils.containsIgnoreCase(Latkes.getServePath(), "localhost") || Strings.isIPv4(Latkes.getServerHost()) ||
+                (StringUtils.isNotBlank(Latkes.getServerPort())) && !"80".equals(Latkes.getServerPort()) && !"443".equals(Latkes.getServerPort());
     }
 
     /**
@@ -138,7 +182,7 @@ public final class Solos {
      */
     public static JSONObject getUploadToken(final RequestContext context) {
         try {
-            final JSONObject currentUser = getCurrentUser(context.getRequest(), context.getResponse());
+            final JSONObject currentUser = getCurrentUser(context);
             if (null == currentUser) {
                 return null;
             }
@@ -225,16 +269,17 @@ public final class Solos {
     /**
      * Gets the current logged-in user.
      *
-     * @param request  the specified request
-     * @param response the specified response
+     * @param context the specified context
      * @return the current logged-in user, returns {@code null} if not found
      */
-    public static JSONObject getCurrentUser(final Request request, final Response response) {
+    public static JSONObject getCurrentUser(final RequestContext context) {
+        final Request request = context.getRequest();
         final Set<Cookie> cookies = request.getCookies();
         if (cookies.isEmpty()) {
             return null;
         }
 
+        final Response response = context.getResponse();
         final BeanManager beanManager = BeanManager.getInstance();
         final UserRepository userRepository = beanManager.getReference(UserRepository.class);
         try {
@@ -326,7 +371,7 @@ public final class Solos {
      * @return {@code true} if the current request is made by logged in user, returns {@code false} otherwise
      */
     public static boolean isLoggedIn(final RequestContext context) {
-        return null != Solos.getCurrentUser(context.getRequest(), context.getResponse());
+        return null != Solos.getCurrentUser(context);
     }
 
     /**
@@ -337,7 +382,7 @@ public final class Solos {
      * administrator, returns {@code false} otherwise
      */
     public static boolean isAdminLoggedIn(final RequestContext context) {
-        final JSONObject user = getCurrentUser(context.getRequest(), context.getResponse());
+        final JSONObject user = getCurrentUser(context);
         if (null == user) {
             return false;
         }
@@ -385,8 +430,7 @@ public final class Solos {
             }
         }
 
-        final Response response = context.getResponse();
-        final JSONObject currentUser = getCurrentUser(request, response);
+        final JSONObject currentUser = getCurrentUser(context);
 
         return !(null != currentUser && !Role.VISITOR_ROLE.equals(currentUser.optString(User.USER_ROLE)));
     }

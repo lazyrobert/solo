@@ -2,28 +2,23 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.service;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.model.Role;
 import org.b3log.latke.model.User;
 import org.b3log.latke.plugin.PluginManager;
@@ -52,7 +47,7 @@ import java.util.List;
  * Solo initialization service.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.5.2.35, Oct 23, 2019
+ * @version 1.5.2.41, May 20, 2020
  * @since 0.4.0
  */
 @Service
@@ -61,7 +56,7 @@ public class InitService {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(InitService.class);
+    private static final Logger LOGGER = LogManager.getLogger(InitService.class);
 
     /**
      * Option repository.
@@ -138,7 +133,7 @@ public class InitService {
     /**
      * Flag of init status.
      */
-    private static boolean inited;
+    public static boolean inited;
 
     /**
      * Flag of printed init prompt.
@@ -199,7 +194,7 @@ public class InitService {
 
         final List<CreateTableResult> createTableResults = JdbcRepositories.initAllTables();
         for (final CreateTableResult createTableResult : createTableResults) {
-            LOGGER.log(Level.DEBUG, "Creates table result [tableName={0}, isSuccess={1}]",
+            LOGGER.log(Level.DEBUG, "Creates table result [tableName={}, isSuccess={}]",
                     createTableResult.getName(), createTableResult.isSuccess());
         }
     }
@@ -284,7 +279,7 @@ public class InitService {
         comment.put(Comment.COMMENT_CONTENT, langPropsService.get("helloWorld.comment.content"));
         comment.put(Comment.COMMENT_ORIGINAL_COMMENT_ID, "");
         comment.put(Comment.COMMENT_ORIGINAL_COMMENT_NAME, "");
-        comment.put(Comment.COMMENT_THUMBNAIL_URL, "https://img.hacpai.com/avatar/1353745196354_1535379434567.png?imageView2/1/w/64/h/64/q/100");
+        comment.put(Comment.COMMENT_THUMBNAIL_URL, Images.COMMUNITY_FILE_URL + "/avatar/1353745196354_1535379434567.png?imageView2/1/w/64/h/64/q/100");
         comment.put(Comment.COMMENT_CREATED, now);
         comment.put(Comment.COMMENT_ON_ID, articleId);
         final String commentId = Ids.genTimeMillisId();
@@ -388,7 +383,7 @@ public class InitService {
             final String tagTitle = tagTitle1.trim();
             final JSONObject tag = new JSONObject();
 
-            LOGGER.log(Level.TRACE, "Found a new tag[title={0}] in article[title={1}]", tagTitle, article.optString(Article.ARTICLE_TITLE));
+            LOGGER.log(Level.TRACE, "Found a new tag[title={}] in article[title={}]", tagTitle, article.optString(Article.ARTICLE_TITLE));
             tag.put(Tag.TAG_TITLE, tagTitle);
             final String tagId = tagRepository.add(tag);
             tag.put(Keys.OBJECT_ID, tagId);
@@ -471,6 +466,54 @@ public class InitService {
     private void initOptions(final JSONObject requestJSONObject) throws Exception {
         LOGGER.debug("Initializing preference....");
 
+        final JSONObject editorModeOpt = new JSONObject();
+        editorModeOpt.put(Keys.OBJECT_ID, Option.ID_C_EDITOR_MODE);
+        editorModeOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        editorModeOpt.put(Option.OPTION_VALUE, "wysiwyg");
+        optionRepository.add(editorModeOpt);
+
+        final JSONObject IMADAOMOpt = new JSONObject();
+        IMADAOMOpt.put(Keys.OBJECT_ID, Option.ID_C_IMADAOM);
+        IMADAOMOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        IMADAOMOpt.put(Option.OPTION_VALUE, "false");
+        optionRepository.add(IMADAOMOpt);
+
+        final JSONObject chinesePunctOpt = new JSONObject();
+        chinesePunctOpt.put(Keys.OBJECT_ID, Option.ID_C_CHINESE_PUNCT);
+        chinesePunctOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        chinesePunctOpt.put(Option.OPTION_VALUE, "true");
+        optionRepository.add(chinesePunctOpt);
+
+        final JSONObject fixTermTypoOpt = new JSONObject();
+        fixTermTypoOpt.put(Keys.OBJECT_ID, Option.ID_C_FIX_TERM_TYPO);
+        fixTermTypoOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        fixTermTypoOpt.put(Option.OPTION_VALUE, "true");
+        optionRepository.add(fixTermTypoOpt);
+
+        final JSONObject autoSpaceOpt = new JSONObject();
+        autoSpaceOpt.put(Keys.OBJECT_ID, Option.ID_C_AUTO_SPACE);
+        autoSpaceOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        autoSpaceOpt.put(Option.OPTION_VALUE, "true");
+        optionRepository.add(autoSpaceOpt);
+
+        final JSONObject showToCOpt = new JSONObject();
+        showToCOpt.put(Keys.OBJECT_ID, Option.ID_C_SHOW_TOC);
+        showToCOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        showToCOpt.put(Option.OPTION_VALUE, "false");
+        optionRepository.add(showToCOpt);
+
+        final JSONObject footnotesOpt = new JSONObject();
+        footnotesOpt.put(Keys.OBJECT_ID, Option.ID_C_FOOTNOTES);
+        footnotesOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        footnotesOpt.put(Option.OPTION_VALUE, "true");
+        optionRepository.add(footnotesOpt);
+
+        final JSONObject showCodeBlockLnOpt = new JSONObject();
+        showCodeBlockLnOpt.put(Keys.OBJECT_ID, Option.ID_C_SHOW_CODE_BLOCK_LN);
+        showCodeBlockLnOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        showCodeBlockLnOpt.put(Option.OPTION_VALUE, DefaultPreference.DEFAULT_SHOW_CODE_BLOCK_LN);
+        optionRepository.add(showCodeBlockLnOpt);
+
         final JSONObject hljsThemeOpt = new JSONObject();
         hljsThemeOpt.put(Keys.OBJECT_ID, Option.ID_C_HLJS_THEME);
         hljsThemeOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
@@ -482,6 +525,12 @@ public class InitService {
         syncGitHubOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
         syncGitHubOpt.put(Option.OPTION_VALUE, DefaultPreference.DEFAULT_SYNC_GITHUB);
         optionRepository.add(syncGitHubOpt);
+
+        final JSONObject githubPATOpt = new JSONObject();
+        githubPATOpt.put(Keys.OBJECT_ID, Option.ID_C_GITHUB_PAT);
+        githubPATOpt.put(Option.OPTION_CATEGORY, Option.CATEGORY_C_PREFERENCE);
+        githubPATOpt.put(Option.OPTION_VALUE, "");
+        optionRepository.add(githubPATOpt);
 
         final JSONObject pullGitHubOpt = new JSONObject();
         pullGitHubOpt.put(Keys.OBJECT_ID, Option.ID_C_PULL_GITHUB);

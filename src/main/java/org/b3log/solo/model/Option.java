@@ -2,18 +2,12 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.model;
 
@@ -25,8 +19,8 @@ import org.json.JSONObject;
  * This class defines option model relevant keys.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @author <a href="https://github.com/hzchendou">hzchendou</a>
- * @version 1.6.0.2, Aug 18, 2019
+ * @author <a href="https://hacpai.com/member/hzchendou">hzchendou</a>
+ * @version 1.7.0.0, May 20, 2020
  * @since 0.6.0
  */
 public final class Option {
@@ -52,15 +46,67 @@ public final class Option {
     public static final String OPTION_CATEGORY = "optionCategory";
 
     // oId constants
+
+    /**
+     * Key of editor mode. 支持配置编辑器模式 https://github.com/88250/solo/issues/95
+     * <ul>
+     *     <li>wysiwyg：所见即所得</li>
+     *     <li>ir：即时渲染</li>
+     *     <li>sv：分屏预览</li>
+     * </ul>
+     * 模式细节介绍详见 <a href="https://github.com/Vanessa219/vditor">Vditor</a> 编辑器文档。
+     */
+    public static final String ID_C_EDITOR_MODE = "editorMode";
+
+    /**
+     * Key of inline math allow digit after open marker flag. 内联数学公式是否允许起始 $ 后紧跟数字 https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_IMADAOM = "inlineMathAllowDigitAfterOpenMarker";
+
+    /**
+     * Key of chinese punct flag. 中文后跟英文逗号句号等标点替换为中文对应标点 https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_CHINESE_PUNCT = "chinesePunct";
+
+    /**
+     * Key of fix term typo flag. 术语修正 https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_FIX_TERM_TYPO = "fixTermTypo";
+
+    /**
+     * Key of auto space flag. 中西文间自动插入空格 https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_AUTO_SPACE = "autoSpace";
+
+    /**
+     * Key of show ToC flag. 支持 [ToC] https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_SHOW_TOC = "showToC";
+
+    /**
+     * Key of footnotes flag. 支持脚注 https://github.com/88250/solo/issues/54
+     */
+    public static final String ID_C_FOOTNOTES = "footnotes";
+
+    /**
+     * Key of show code block line num flag. 支持代码块行号显示 https://github.com/88250/solo/issues/4
+     */
+    public static final String ID_C_SHOW_CODE_BLOCK_LN = "showCodeBlockLn";
+
     /**
      * Key of hljs theme. 在设置中可选择语法高亮主题 https://github.com/b3log/solo/issues/12722
      */
     public static final String ID_C_HLJS_THEME = "hljsTheme";
 
     /**
-     * Key of enable sync (push) GitHub. 导出文章到仓库 https://hacpai.com/article/1557238327458
+     * Key of enable backup public articles to HacPai. 备份公开文章到社区 https://hacpai.com/article/1557238327458
      */
     public static final String ID_C_SYNC_GITHUB = "syncGitHub";
+
+    /**
+     * Key of GitHub PAT (personal access token).
+     */
+    public static final String ID_C_GITHUB_PAT = "githubPAT";
 
     /**
      * Key of enable sync (pull) GitHub. 拉取并展示仓库 https://hacpai.com/article/1557238327458
@@ -300,10 +346,15 @@ public final class Option {
      * Default preference.
      *
      * @author <a href="http://88250.b3log.org">Liang Ding</a>
-     * @version 2.3.0.3, Sep 18, 2019
+     * @version 2.3.0.6, Jan 25, 2020
      * @since 0.3.1
      */
     public static final class DefaultPreference {
+
+        /**
+         * Default show code block line num.
+         */
+        public static final String DEFAULT_SHOW_CODE_BLOCK_LN = "false";
 
         /**
          * Default hljs theme.

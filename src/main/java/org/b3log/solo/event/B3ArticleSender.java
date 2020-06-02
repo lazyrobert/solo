@@ -2,34 +2,28 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.event;
 
 import jodd.http.HttpRequest;
 import jodd.http.HttpResponse;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.event.AbstractEventListener;
 import org.b3log.latke.event.Event;
 import org.b3log.latke.ioc.BeanManager;
 import org.b3log.latke.ioc.Singleton;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.model.User;
-import org.b3log.latke.util.Strings;
 import org.b3log.solo.Server;
 import org.b3log.solo.model.Article;
 import org.b3log.solo.model.Common;
@@ -41,14 +35,14 @@ import org.b3log.solo.util.Solos;
 import org.json.JSONObject;
 
 /**
- * This listener is responsible for sending article to B3log Rhythm. Sees <a href="https://hacpai.com/b3log">B3log 构思</a> for more details.
+ * This listener is responsible for sending article to B3log Rhythm. Sees <a href="https://hacpai.com/article/1546941897596">B3log 构思 - 分布式社区网络</a> for more details.
  * <p>
  * API spec: https://hacpai.com/article/1457158841475
  * </p>
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://hacpai.com/member/armstrong">ArmstrongCN</a>
- * @version 1.0.2.20, Apr 13, 2019
+ * @version 1.0.2.25, Jan 12, 2020
  * @since 0.3.1
  */
 @Singleton
@@ -57,12 +51,12 @@ public class B3ArticleSender extends AbstractEventListener<JSONObject> {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(B3ArticleSender.class);
+    private static final Logger LOGGER = LogManager.getLogger(B3ArticleSender.class);
 
     @Override
     public void action(final Event<JSONObject> event) {
         final JSONObject data = event.getData();
-        LOGGER.log(Level.DEBUG, "Processing an event [type={0}, data={1}] in listener [className={2}]",
+        LOGGER.log(Level.DEBUG, "Processing an event [type={}, data={}] in listener [className={}]",
                 event.getType(), data, B3ArticleSender.class.getName());
 
         pushArticleToRhy(data);
@@ -78,26 +72,17 @@ public class B3ArticleSender extends AbstractEventListener<JSONObject> {
             final JSONObject originalArticle = data.getJSONObject(Article.ARTICLE);
             final String title = originalArticle.getString(Article.ARTICLE_TITLE);
             if (Article.ARTICLE_STATUS_C_PUBLISHED != originalArticle.optInt(Article.ARTICLE_STATUS)) {
-                LOGGER.log(Level.INFO, "Ignored push a draft [title={0}] to Rhy", title);
-
+                LOGGER.log(Level.INFO, "Ignored push a draft [title={}] to Rhy", title);
                 return;
             }
 
             if (StringUtils.isNotBlank(originalArticle.optString(Article.ARTICLE_VIEW_PWD))) {
-                LOGGER.log(Level.INFO, "Article [title={0}] is a password article, ignored push to Rhy", title);
-
+                LOGGER.log(Level.INFO, "Article [title={}] is a password article, ignored push to Rhy", title);
                 return;
             }
 
             if (!originalArticle.optBoolean(Common.POST_TO_COMMUNITY)) {
-                LOGGER.log(Level.INFO, "Article [title={0}] push flag [postToCommunity] is false, ignored push to Rhy", title);
-
-                return;
-            }
-
-            if (StringUtils.containsIgnoreCase(Latkes.getServePath(), ("localhost")) || Strings.isIPv4(Latkes.getServerHost())) {
-                LOGGER.log(Level.INFO, "Solo is running on local server, ignored push article [title={0}] to Rhy", title);
-
+                LOGGER.log(Level.INFO, "Article [title={}] push flag [postToCommunity] is [false], ignored push to Rhy", title);
                 return;
             }
 
@@ -126,8 +111,9 @@ public class B3ArticleSender extends AbstractEventListener<JSONObject> {
             final HttpResponse response = HttpRequest.post("https://rhythm.b3log.org/api/article").bodyText(requestJSONObject.toString()).
                     connectionTimeout(3000).timeout(7000).trustAllCerts(true).
                     contentTypeJson().header("User-Agent", Solos.USER_AGENT).send();
-
-            LOGGER.log(Level.INFO, "Pushed an article [title={0}] to Rhy, response [{1}]", title, response.toString());
+            response.charset("UTF-8");
+            final JSONObject result = new JSONObject(response.bodyText());
+            LOGGER.log(Level.INFO, "Pushed an article [title=" + title + "] to Rhy, result [" + result.optString(Keys.MSG) + "]");
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Pushes an article to Rhy failed: " + e.getMessage());
         }

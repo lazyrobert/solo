@@ -2,30 +2,31 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.StringLayout;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.event.EventManager;
 import org.b3log.latke.http.BaseServer;
 import org.b3log.latke.http.Dispatcher;
 import org.b3log.latke.ioc.BeanManager;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.plugin.PluginManager;
 import org.b3log.latke.plugin.ViewLoadEventHandler;
 import org.b3log.latke.repository.Transaction;
@@ -33,7 +34,6 @@ import org.b3log.latke.util.Stopwatchs;
 import org.b3log.latke.util.Strings;
 import org.b3log.solo.event.B3ArticleSender;
 import org.b3log.solo.event.B3ArticleUpdater;
-import org.b3log.solo.event.B3CommentSender;
 import org.b3log.solo.event.PluginRefresher;
 import org.b3log.solo.processor.*;
 import org.b3log.solo.processor.console.*;
@@ -42,11 +42,14 @@ import org.b3log.solo.service.*;
 import org.b3log.solo.util.Markdowns;
 import org.json.JSONObject;
 
+import java.io.StringWriter;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Server.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 2.0.0.5, Nov 18, 2019
+ * @version 3.0.1.7, May 21, 2020
  * @since 1.2.0
  */
 public final class Server extends BaseServer {
@@ -54,12 +57,45 @@ public final class Server extends BaseServer {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(Server.class);
+    private static final Logger LOGGER = LogManager.getLogger(Server.class);
 
     /**
      * Solo version.
      */
-    public static final String VERSION = "3.6.7";
+    public static final String VERSION = "4.1.0";
+
+    /**
+     * In-Memory tail logger writer.
+     */
+    public static final TailStringWriter TAIL_LOGGER_WRITER = new TailStringWriter();
+
+    /**
+     * Initializes In-Memory logger. 后台增加服务端日志浏览 https://github.com/88250/solo/issues/91
+     */
+    public static void initInMemoryLogger() {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        final Configuration config = ctx.getConfiguration();
+        final StringLayout layout = PatternLayout.newBuilder().withPattern("[%-5p]-[%d{yyyy-MM-dd HH:mm:ss}]-[%c:%L]: %m%n").build();
+        final Appender appender = WriterAppender.createAppender(layout, null, TAIL_LOGGER_WRITER, "InMemoryTail", true, true);
+        appender.start();
+        config.addAppender(appender);
+        config.getRootLogger().addAppender(appender, Level.TRACE, null);
+        ctx.updateLoggers();
+    }
+
+    public static class TailStringWriter extends StringWriter {
+
+        private final AtomicInteger count = new AtomicInteger();
+
+        @Override
+        public void flush() {
+            super.flush();
+            if (2048 <= count.incrementAndGet()) {
+                super.getBuffer().setLength(0);
+                count.set(0);
+            }
+        }
+    }
 
     /**
      * Main.
@@ -67,43 +103,41 @@ public final class Server extends BaseServer {
      * @param args the specified arguments
      */
     public static void main(final String[] args) {
+        initInMemoryLogger();
         Stopwatchs.start("Booting");
 
         final Options options = new Options();
-        final Option listenPortOpt = Option.builder("lp").longOpt("listen_port").argName("LISTEN_PORT").
-                hasArg().desc("listen port, default is 8080").build();
+        final Option listenPortOpt = Option.builder().longOpt("listen_port").argName("LISTEN_PORT").hasArg().desc("listen port, default is 8080").build();
         options.addOption(listenPortOpt);
 
-        final Option serverSchemeOpt = Option.builder("ss").longOpt("server_scheme").argName("SERVER_SCHEME").
-                hasArg().desc("browser visit protocol, default is http").build();
+        final Option unixDomainSocketPathOpt = Option.builder().longOpt("unix_domain_socket_path").argName("UNIX_DOMAIN_SOCKET_PATH").hasArg().desc("unix domain socket path").build();
+        options.addOption(unixDomainSocketPathOpt);
+
+        final Option serverSchemeOpt = Option.builder().longOpt("server_scheme").argName("SERVER_SCHEME").hasArg().desc("browser visit protocol, default is http").build();
         options.addOption(serverSchemeOpt);
 
-        final Option serverHostOpt = Option.builder("sh").longOpt("server_host").argName("SERVER_HOST").
-                hasArg().desc("browser visit domain name, default is localhost").build();
+        final Option serverHostOpt = Option.builder().longOpt("server_host").argName("SERVER_HOST").hasArg().desc("browser visit domain name, default is localhost").build();
         options.addOption(serverHostOpt);
 
-        final Option serverPortOpt = Option.builder("sp").longOpt("server_port").argName("SERVER_PORT").
-                hasArg().desc("browser visit port, default is 8080").build();
+        final Option serverPortOpt = Option.builder().longOpt("server_port").argName("SERVER_PORT").hasArg().desc("browser visit port, default is 8080").build();
         options.addOption(serverPortOpt);
 
-        final Option staticServerSchemeOpt = Option.builder("sss").longOpt("static_server_scheme").argName("STATIC_SERVER_SCHEME").
-                hasArg().desc("browser visit static resource protocol, default is http").build();
+        final Option staticServerSchemeOpt = Option.builder().longOpt("static_server_scheme").argName("STATIC_SERVER_SCHEME").hasArg().desc("browser visit static resource protocol, default is http").build();
         options.addOption(staticServerSchemeOpt);
 
-        final Option staticServerHostOpt = Option.builder("ssh").longOpt("static_server_host").argName("STATIC_SERVER_HOST").
-                hasArg().desc("browser visit static resource domain name, default is localhost").build();
+        final Option staticServerHostOpt = Option.builder().longOpt("static_server_host").argName("STATIC_SERVER_HOST").hasArg().desc("browser visit static resource domain name, default is localhost").build();
         options.addOption(staticServerHostOpt);
 
-        final Option staticServerPortOpt = Option.builder("ssp").longOpt("static_server_port").argName("STATIC_SERVER_PORT").
-                hasArg().desc("browser visit static resource port, default is 8080").build();
+        final Option staticServerPortOpt = Option.builder().longOpt("static_server_port").argName("STATIC_SERVER_PORT").hasArg().desc("browser visit static resource port, default is 8080").build();
         options.addOption(staticServerPortOpt);
 
-        final Option runtimeModeOpt = Option.builder("rm").longOpt("runtime_mode").argName("RUNTIME_MODE").
-                hasArg().desc("runtime mode (DEVELOPMENT/PRODUCTION), default is DEVELOPMENT").build();
+        final Option staticPathOpt = Option.builder().longOpt("static_path").argName("STATIC_PATH").hasArg().desc("browser visit static resource path, default is empty").build();
+        options.addOption(staticPathOpt);
+
+        final Option runtimeModeOpt = Option.builder().longOpt("runtime_mode").argName("RUNTIME_MODE").hasArg().desc("runtime mode (DEVELOPMENT/PRODUCTION), default is DEVELOPMENT").build();
         options.addOption(runtimeModeOpt);
 
-        final Option luteHttpOpt = Option.builder("lute").longOpt("lute_http").argName("LUTE_HTTP").
-                hasArg().desc("lute http URL, default is http://localhost:8249, see https://github.com/88250/lute-http for more details").build();
+        final Option luteHttpOpt = Option.builder().longOpt("lute_http").argName("LUTE_HTTP").hasArg().desc("lute http URL, default is http://localhost:8249, see https://github.com/88250/lute-http for more details").build();
         options.addOption(luteHttpOpt);
 
         options.addOption("h", "help", false, "print help for the command");
@@ -122,19 +156,12 @@ public final class Server extends BaseServer {
             commandLine = commandLineParser.parse(options, args);
         } catch (final ParseException e) {
             helpFormatter.printHelp(cmdSyntax, header, options, footer, true);
-
             return;
         }
 
         if (commandLine.hasOption("h")) {
             helpFormatter.printHelp(cmdSyntax, header, options, footer, true);
-
             return;
-        }
-
-        String portArg = commandLine.getOptionValue("listen_port");
-        if (!Strings.isNumeric(portArg)) {
-            portArg = "8080";
         }
 
         try {
@@ -170,6 +197,22 @@ public final class Server extends BaseServer {
         if (null != staticServerPort) {
             Latkes.setLatkeProperty("staticServerPort", staticServerPort);
         }
+        String staticPath = commandLine.getOptionValue("static_path");
+        if (null != staticPath) {
+            if (StringUtils.equals(staticServerHost, "cdn.jsdelivr.net")) {
+                // 如果使用了 jsDelivr，则需要加上版本号避免 CDN 缓存问题 https://github.com/88250/solo/issues/83
+                // /gh/88250/solo/src/main/resources => /gh/88250/solo@version/src/main/resources
+                if (!StringUtils.contains(staticPath, "@")) {
+                    String gitCommit = System.getenv("git_commit");
+                    if (StringUtils.isBlank(gitCommit)) {
+                        gitCommit = Server.VERSION;
+                    }
+                    LOGGER.log(Level.INFO, "Git commit [" + gitCommit + "]");
+                    staticPath = StringUtils.replace(staticPath, "/solo/", "/solo@" + gitCommit + "/");
+                }
+            }
+            Latkes.setLatkeProperty("staticPath", staticPath);
+        }
         String runtimeMode = commandLine.getOptionValue("runtime_mode");
         if (null != runtimeMode) {
             Latkes.setRuntimeMode(Latkes.RuntimeMode.valueOf(runtimeMode));
@@ -199,13 +242,7 @@ public final class Server extends BaseServer {
             }
         }
 
-        Dispatcher.startRequestHandler = new BeforeRequestHandler();
-        Dispatcher.HANDLERS.add(1, new SkinHandler());
-        Dispatcher.HANDLERS.add(2, new InitCheckHandler());
-        Dispatcher.HANDLERS.add(3, new PermalinkHandler());
-        Dispatcher.endRequestHandler = new AfterRequestHandler();
-
-        routeConsoleProcessors();
+        routeProcessors();
 
         final Latkes.RuntimeDatabase runtimeDatabase = Latkes.getRuntimeDatabase();
         final String jdbcUsername = Latkes.getLocalProperty("jdbc.username");
@@ -271,10 +308,19 @@ public final class Server extends BaseServer {
         }));
 
         Stopwatchs.end();
-        LOGGER.log(Level.DEBUG, "Stopwatch: {0}{1}", Strings.LINE_SEPARATOR, Stopwatchs.getTimingStat());
+        LOGGER.log(Level.DEBUG, "Stopwatch: {}{}", Strings.LINE_SEPARATOR, Stopwatchs.getTimingStat());
         Stopwatchs.release();
 
-        server.start(Integer.valueOf(portArg));
+        final String unixDomainSocketPath = commandLine.getOptionValue("unix_domain_socket_path");
+        if (StringUtils.isNotBlank(unixDomainSocketPath)) {
+            server.start(unixDomainSocketPath);
+        } else {
+            String portArg = commandLine.getOptionValue("listen_port");
+            if (!Strings.isNumeric(portArg)) {
+                portArg = "8080";
+            }
+            server.start(Integer.parseInt(portArg));
+        }
     }
 
     /**
@@ -299,6 +345,16 @@ public final class Server extends BaseServer {
 
             final SkinMgmtService skinMgmtService = beanManager.getReference(SkinMgmtService.class);
             skinMgmtService.loadSkins(skin);
+
+            final JSONObject preference = optionQueryService.getPreference();
+            if (null == preference) {
+                return;
+            }
+
+            final String showClodeBlockLn = preference.optString(org.b3log.solo.model.Option.ID_C_SHOW_CODE_BLOCK_LN);
+            Markdowns.SHOW_CODE_BLOCK_LN = StringUtils.equalsIgnoreCase(showClodeBlockLn, "true");
+            final String showToC = preference.optString(org.b3log.solo.model.Option.ID_C_SHOW_TOC);
+            Markdowns.SHOW_TOC = StringUtils.equalsIgnoreCase(showToC, "true");
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, e.getMessage(), e);
 
@@ -325,8 +381,6 @@ public final class Server extends BaseServer {
             eventManager.registerListener(articleSender);
             final B3ArticleUpdater articleUpdater = beanManager.getReference(B3ArticleUpdater.class);
             eventManager.registerListener(articleUpdater);
-            final B3CommentSender commentSender = beanManager.getReference(B3CommentSender.class);
-            eventManager.registerListener(commentSender);
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Register event handlers failed", e);
 
@@ -354,15 +408,120 @@ public final class Server extends BaseServer {
         }
     }
 
+    public static void routeProcessors() {
+        Dispatcher.startRequestHandler = new BeforeRequestHandler();
+        Dispatcher.HANDLERS.add(1, new SkinHandler());
+        Dispatcher.HANDLERS.add(2, new InitCheckHandler());
+        Dispatcher.HANDLERS.add(3, new PermalinkHandler());
+        Dispatcher.endRequestHandler = new AfterRequestHandler();
+
+        routeConsoleProcessors();
+        routeIndexProcessors();
+        Dispatcher.mapping();
+    }
+
     /**
-     * 后台控制器使用函数式路由. https://github.com/b3log/solo/issues/12580
+     * 前台路由.
      */
-    public static void routeConsoleProcessors() {
+    private static void routeIndexProcessors() {
         final BeanManager beanManager = BeanManager.getInstance();
+        final StaticMidware staticMidware = beanManager.getReference(StaticMidware.class);
+
+        final ArticleProcessor articleProcessor = beanManager.getReference(ArticleProcessor.class);
+        final Dispatcher.RouterGroup articleGroup = Dispatcher.group();
+        articleGroup.post("/console/markdown/2html", articleProcessor::markdown2HTML).
+                get("/console/article-pwd", articleProcessor::showArticlePwdForm).
+                post("/console/article-pwd", articleProcessor::onArticlePwdForm).
+                post("/articles/random", articleProcessor::getRandomArticles).
+                get("/article/id/{id}/relevant/articles", articleProcessor::getRelevantArticles).
+                get("/get-article-content", articleProcessor::getArticleContent).
+                get("/articles", articleProcessor::getArticlesByPage).
+                get("/articles/tags/{tagTitle}", articleProcessor::getTagArticlesByPage).
+                get("/articles/archives/{yyyy}/{MM}", articleProcessor::getArchivesArticlesByPage).
+                get("/articles/authors/{author}", articleProcessor::getAuthorsArticlesByPage).
+                get("/authors/{author}", articleProcessor::showAuthorArticles).
+                get("/archives/{yyyy}/{MM}", articleProcessor::showArchiveArticles).
+                get("/article", articleProcessor::showArticle);
+
+        final B3Receiver b3Receiver = beanManager.getReference(B3Receiver.class);
+        final Dispatcher.RouterGroup b3Group = Dispatcher.group();
+        b3Group.router().post().put().uri("/apis/symphony/article").handler(b3Receiver::postArticle);
+
+        final BlogProcessor blogProcessor = beanManager.getReference(BlogProcessor.class);
+        final Dispatcher.RouterGroup blogGroup = Dispatcher.group();
+        blogGroup.get("/manifest.json", blogProcessor::getPWAManifestJSON).
+                get("/blog/info", blogProcessor::getBlogInfo).
+                get("/blog/articles-tags", blogProcessor::getArticlesTags);
+
+        final CategoryProcessor categoryProcessor = beanManager.getReference(CategoryProcessor.class);
+        final Dispatcher.RouterGroup categoryGroup = Dispatcher.group();
+        categoryGroup.middlewares(staticMidware::handle);
+        categoryGroup.get("/articles/category/{categoryURI}", categoryProcessor::getCategoryArticlesByPage).
+                get("/category/{categoryURI}", categoryProcessor::showCategoryArticles);
+
+        final CommentProcessor commentProcessor = beanManager.getReference(CommentProcessor.class);
+        final Dispatcher.RouterGroup commentGroup = Dispatcher.group();
+        commentGroup.post("/article/comments", commentProcessor::addArticleComment);
+
+        final FeedProcessor feedProcessor = beanManager.getReference(FeedProcessor.class);
+        final Dispatcher.RouterGroup feedGroup = Dispatcher.group();
+        feedGroup.middlewares(staticMidware::handle);
+        feedGroup.router().get().head().uri("/atom.xml").handler(feedProcessor::blogArticlesAtom).
+                get().head().uri("/rss.xml").handler(feedProcessor::blogArticlesRSS);
+
+        final IndexProcessor indexProcessor = beanManager.getReference(IndexProcessor.class);
+        final Dispatcher.RouterGroup indexGroup = Dispatcher.group();
+        indexGroup.middlewares(staticMidware::handle);
+        indexGroup.router().get(new String[]{"", "/", "/index.html"}, indexProcessor::showIndex);
+        indexGroup.get("/start", indexProcessor::showStart).
+                get("/logout", indexProcessor::logout).
+                get("/kill-browser", indexProcessor::showKillBrowser);
+
+        final OAuthProcessor oAuthProcessor = beanManager.getReference(OAuthProcessor.class);
+        final Dispatcher.RouterGroup oauthGroup = Dispatcher.group();
+        oauthGroup.get("/login/redirect", oAuthProcessor::redirectAuth).
+                get("/login/callback", oAuthProcessor::authCallback);
+
+        final SearchProcessor searchProcessor = beanManager.getReference(SearchProcessor.class);
+        final Dispatcher.RouterGroup searchGroup = Dispatcher.group();
+        searchGroup.get("/opensearch.xml", searchProcessor::showOpensearchXML).
+                get("/search", searchProcessor::search);
+
+        final SitemapProcessor sitemapProcessor = beanManager.getReference(SitemapProcessor.class);
+        final Dispatcher.RouterGroup sitemapGroup = Dispatcher.group();
+        sitemapGroup.middlewares(staticMidware::handle);
+        sitemapGroup.get("/sitemap.xml", sitemapProcessor::sitemap);
+
+        final TagProcessor tagProcessor = beanManager.getReference(TagProcessor.class);
+        final Dispatcher.RouterGroup tagGroup = Dispatcher.group();
+        tagGroup.middlewares(staticMidware::handle);
+        tagGroup.get("/tags/{tagTitle}", tagProcessor::showTagArticles);
+
+        final UserTemplateProcessor userTemplateProcessor = beanManager.getReference(UserTemplateProcessor.class);
+        final Dispatcher.RouterGroup userTemplateGroup = Dispatcher.group();
+        userTemplateGroup.middlewares(staticMidware::handle);
+        userTemplateGroup.get("/{name}.html", userTemplateProcessor::showPage);
+    }
+
+    /**
+     * 后台路由.
+     */
+    private static void routeConsoleProcessors() {
+        final BeanManager beanManager = BeanManager.getInstance();
+
+        final ConsoleAuthMidware consoleAuthMidware = beanManager.getReference(ConsoleAuthMidware.class);
+        final ConsoleAdminAuthMidware consoleAdminAuthMidware = beanManager.getReference(ConsoleAdminAuthMidware.class);
+
         final AdminConsole adminConsole = beanManager.getReference(AdminConsole.class);
-        Dispatcher.get("/admin-index.do", adminConsole::showAdminIndex);
-        Dispatcher.get("/admin-preference.do", adminConsole::showAdminPreferenceFunction);
-        Dispatcher.route().get(new String[]{"/admin-article.do",
+        final Dispatcher.RouterGroup adminConsoleGroup = Dispatcher.group();
+        adminConsoleGroup.middlewares(consoleAuthMidware::handle);
+        adminConsoleGroup.get("/admin-index.do", adminConsole::showAdminIndex).
+                get("/admin-preference.do", adminConsole::showAdminPreferenceFunction).
+                get("/console/export/sql", adminConsole::exportSQL).
+                get("/console/export/json", adminConsole::exportJSON).
+                get("/console/export/hexo", adminConsole::exportHexo).
+                post("/console/import/markdown-zip", adminConsole::importMarkdownZip);
+        adminConsoleGroup.router().get(new String[]{"/admin-article.do",
                 "/admin-article-list.do",
                 "/admin-comment-list.do",
                 "/admin-link-list.do",
@@ -373,88 +532,117 @@ public final class Server extends BaseServer {
                 "/admin-category-list.do",
                 "/admin-theme-list.do",
                 "/admin-plugin-list.do",
+                "/admin-staticsite.do",
                 "/admin-main.do",
                 "/admin-about.do"}, adminConsole::showAdminFunctions);
-        Dispatcher.get("/console/export/sql", adminConsole::exportSQL);
-        Dispatcher.get("/console/export/json", adminConsole::exportJSON);
-        Dispatcher.get("/console/export/hexo", adminConsole::exportHexo);
 
         final ArticleConsole articleConsole = beanManager.getReference(ArticleConsole.class);
-        Dispatcher.get("/console/article/push2rhy", articleConsole::pushArticleToCommunity);
-        Dispatcher.get("/console/thumbs", articleConsole::getArticleThumbs);
-        Dispatcher.get("/console/article/{id}", articleConsole::getArticle);
-        Dispatcher.get("/console/articles/status/{status}/{page}/{pageSize}/{windowSize}", articleConsole::getArticles);
-        Dispatcher.delete("/console/article/{id}", articleConsole::removeArticle);
-        Dispatcher.put("/console/article/unpublish/{id}", articleConsole::cancelPublishArticle);
-        Dispatcher.put("/console/article/canceltop/{id}", articleConsole::cancelTopArticle);
-        Dispatcher.put("/console/article/puttop/{id}", articleConsole::putTopArticle);
-        Dispatcher.put("/console/article/", articleConsole::updateArticle);
-        Dispatcher.post("/console/article/", articleConsole::addArticle);
-
-        final CategoryConsole categoryConsole = beanManager.getReference(CategoryConsole.class);
-        Dispatcher.put("/console/category/order/", categoryConsole::changeOrder);
-        Dispatcher.get("/console/category/{id}", categoryConsole::getCategory);
-        Dispatcher.delete("/console/category/{id}", categoryConsole::removeCategory);
-        Dispatcher.put("/console/category/", categoryConsole::updateCategory);
-        Dispatcher.post("/console/category/", categoryConsole::addCategory);
-        Dispatcher.get("/console/categories/{page}/{pageSize}/{windowSize}", categoryConsole::getCategories);
+        final Dispatcher.RouterGroup articleConsoleGroup = Dispatcher.group();
+        articleConsoleGroup.middlewares(consoleAuthMidware::handle);
+        articleConsoleGroup.get("/console/article/push2rhy", articleConsole::pushArticleToCommunity).
+                get("/console/thumbs", articleConsole::getArticleThumbs).
+                get("/console/article/{id}", articleConsole::getArticle).
+                get("/console/articles/status/{status}/{page}/{pageSize}/{windowSize}", articleConsole::getArticles).
+                delete("/console/article/{id}", articleConsole::removeArticle).
+                put("/console/article/unpublish/{id}", articleConsole::cancelPublishArticle).
+                put("/console/article/canceltop/{id}", articleConsole::cancelTopArticle).
+                put("/console/article/puttop/{id}", articleConsole::putTopArticle).
+                put("/console/article/", articleConsole::updateArticle).
+                post("/console/article/", articleConsole::addArticle);
 
         final CommentConsole commentConsole = beanManager.getReference(CommentConsole.class);
-        Dispatcher.delete("/console/article/comment/{id}", commentConsole::removeArticleComment);
-        Dispatcher.get("/console/comments/{page}/{pageSize}/{windowSize}", commentConsole::getComments);
-        Dispatcher.get("/console/comments/article/{id}", commentConsole::getArticleComments);
-
-        final LinkConsole linkConsole = beanManager.getReference(LinkConsole.class);
-        Dispatcher.delete("/console/link/{id}", linkConsole::removeLink);
-        Dispatcher.put("/console/link/", linkConsole::updateLink);
-        Dispatcher.put("/console/link/order/", linkConsole::changeOrder);
-        Dispatcher.post("/console/link/", linkConsole::addLink);
-        Dispatcher.get("/console/links/{page}/{pageSize}/{windowSize}", linkConsole::getLinks);
-        Dispatcher.get("/console/link/{id}", linkConsole::getLink);
-
-        final PageConsole pageConsole = beanManager.getReference(PageConsole.class);
-        Dispatcher.put("/console/page/", pageConsole::updatePage);
-        Dispatcher.delete("/console/page/{id}", pageConsole::removePage);
-        Dispatcher.post("/console/page/", pageConsole::addPage);
-        Dispatcher.put("/console/page/order/", pageConsole::changeOrder);
-        Dispatcher.get("/console/page/{id}", pageConsole::getPage);
-        Dispatcher.get("/console/pages/{page}/{pageSize}/{windowSize}", pageConsole::getPages);
-
-        final PluginConsole pluginConsole = beanManager.getReference(PluginConsole.class);
-        Dispatcher.put("/console/plugin/status/", pluginConsole::setPluginStatus);
-        Dispatcher.get("/console/plugins/{page}/{pageSize}/{windowSize}", pluginConsole::getPlugins);
-        Dispatcher.post("/console/plugin/toSetting", pluginConsole::toSetting);
-        Dispatcher.post("/console/plugin/updateSetting", pluginConsole::updateSetting);
-
-        final PreferenceConsole preferenceConsole = beanManager.getReference(PreferenceConsole.class);
-        Dispatcher.get("/console/signs/", preferenceConsole::getSigns);
-        Dispatcher.get("/console/preference/", preferenceConsole::getPreference);
-        Dispatcher.put("/console/preference/", preferenceConsole::updatePreference);
-
-        final SkinConsole skinConsole = beanManager.getReference(SkinConsole.class);
-        Dispatcher.get("/console/skin", skinConsole::getSkin);
-        Dispatcher.put("/console/skin", skinConsole::updateSkin);
-
-        final RepairConsole repairConsole = beanManager.getReference(RepairConsole.class);
-        Dispatcher.get("/fix/restore-signs", repairConsole::restoreSigns);
-        Dispatcher.get("/fix/archivedate-articles", repairConsole::cleanArchiveDateArticles);
+        final Dispatcher.RouterGroup commentConsoleGroup = Dispatcher.group();
+        commentConsoleGroup.middlewares(consoleAuthMidware::handle);
+        commentConsoleGroup.delete("/console/article/comment/{id}", commentConsole::removeArticleComment).
+                get("/console/comments/{page}/{pageSize}/{windowSize}", commentConsole::getComments).
+                get("/console/comments/article/{id}", commentConsole::getArticleComments);
 
         final TagConsole tagConsole = beanManager.getReference(TagConsole.class);
-        Dispatcher.get("/console/tags", tagConsole::getTags);
-        Dispatcher.get("/console/tag/unused", tagConsole::getUnusedTags);
+        final Dispatcher.RouterGroup tagConsoleGroup = Dispatcher.group();
+        tagConsoleGroup.middlewares(consoleAuthMidware::handle);
+        tagConsoleGroup.get("/console/tags", tagConsole::getTags).
+                get("/console/tag/unused", tagConsole::getUnusedTags);
+
+        final CategoryConsole categoryConsole = beanManager.getReference(CategoryConsole.class);
+        final Dispatcher.RouterGroup categoryGroup = Dispatcher.group();
+        categoryGroup.middlewares(consoleAdminAuthMidware::handle);
+        categoryGroup.put("/console/category/order/", categoryConsole::changeOrder).
+                get("/console/category/{id}", categoryConsole::getCategory).
+                delete("/console/category/{id}", categoryConsole::removeCategory).
+                put("/console/category/", categoryConsole::updateCategory).
+                post("/console/category/", categoryConsole::addCategory).
+                get("/console/categories/{page}/{pageSize}/{windowSize}", categoryConsole::getCategories);
+
+        final LinkConsole linkConsole = beanManager.getReference(LinkConsole.class);
+        final Dispatcher.RouterGroup linkConsoleGroup = Dispatcher.group();
+        linkConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        linkConsoleGroup.delete("/console/link/{id}", linkConsole::removeLink).
+                put("/console/link/", linkConsole::updateLink).
+                put("/console/link/order/", linkConsole::changeOrder).
+                post("/console/link/", linkConsole::addLink).
+                get("/console/links/{page}/{pageSize}/{windowSize}", linkConsole::getLinks).
+                get("/console/link/{id}", linkConsole::getLink);
+
+        final PageConsole pageConsole = beanManager.getReference(PageConsole.class);
+        final Dispatcher.RouterGroup pageConsoleGroup = Dispatcher.group();
+        pageConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        pageConsoleGroup.put("/console/page/", pageConsole::updatePage).
+                delete("/console/page/{id}", pageConsole::removePage).
+                post("/console/page/", pageConsole::addPage).
+                put("/console/page/order/", pageConsole::changeOrder).
+                get("/console/page/{id}", pageConsole::getPage).
+                get("/console/pages/{page}/{pageSize}/{windowSize}", pageConsole::getPages);
+
+        final PluginConsole pluginConsole = beanManager.getReference(PluginConsole.class);
+        final Dispatcher.RouterGroup pluginConsoleGroup = Dispatcher.group();
+        pluginConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        pluginConsoleGroup.put("/console/plugin/status/", pluginConsole::setPluginStatus).
+                get("/console/plugins/{page}/{pageSize}/{windowSize}", pluginConsole::getPlugins).
+                post("/console/plugin/toSetting", pluginConsole::toSetting).
+                post("/console/plugin/updateSetting", pluginConsole::updateSetting);
+
+        final PreferenceConsole preferenceConsole = beanManager.getReference(PreferenceConsole.class);
+        final Dispatcher.RouterGroup preferenceConsoleGroup = Dispatcher.group();
+        preferenceConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        preferenceConsoleGroup.get("/console/signs/", preferenceConsole::getSigns).
+                get("/console/preference/", preferenceConsole::getPreference).
+                put("/console/preference/", preferenceConsole::updatePreference);
+
+        final SkinConsole skinConsole = beanManager.getReference(SkinConsole.class);
+        final Dispatcher.RouterGroup skinConsoleGroup = Dispatcher.group();
+        skinConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        skinConsoleGroup.get("/console/skin", skinConsole::getSkin).
+                put("/console/skin", skinConsole::updateSkin);
+
+        final RepairConsole repairConsole = beanManager.getReference(RepairConsole.class);
+        final Dispatcher.RouterGroup repairConsoleGroup = Dispatcher.group();
+        repairConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        repairConsoleGroup.get("/fix/restore-signs", repairConsole::restoreSigns).
+                get("/fix/archivedate-articles", repairConsole::cleanArchiveDateArticles);
 
         final OtherConsole otherConsole = beanManager.getReference(OtherConsole.class);
-        Dispatcher.delete("/console/archive/unused", otherConsole::removeUnusedArchives);
-        Dispatcher.delete("/console/tag/unused", otherConsole::removeUnusedTags);
+        final Dispatcher.RouterGroup otherConsoleGroup = Dispatcher.group();
+        otherConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        otherConsoleGroup.delete("/console/archive/unused", otherConsole::removeUnusedArchives).
+                delete("/console/tag/unused", otherConsole::removeUnusedTags);
+        otherConsoleGroup.get("/console/log", otherConsole::getLog);
 
         final UserConsole userConsole = beanManager.getReference(UserConsole.class);
-        Dispatcher.put("/console/user/", userConsole::updateUser);
-        Dispatcher.delete("/console/user/{id}", userConsole::removeUser);
-        Dispatcher.get("/console/users/{page}/{pageSize}/{windowSize}", userConsole::getUsers);
-        Dispatcher.get("/console/user/{id}", userConsole::getUser);
-        Dispatcher.get("/console/changeRole/{id}", userConsole::changeUserRole);
+        final Dispatcher.RouterGroup userConsoleGroup = Dispatcher.group();
+        userConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        userConsoleGroup.put("/console/user/", userConsole::updateUser).
+                delete("/console/user/{id}", userConsole::removeUser).
+                get("/console/users/{page}/{pageSize}/{windowSize}", userConsole::getUsers).
+                get("/console/user/{id}", userConsole::getUser).
+                get("/console/changeRole/{id}", userConsole::changeUserRole);
 
-        Dispatcher.mapping();
+        final StaticSiteConsole staticSiteConsole = beanManager.getReference(StaticSiteConsole.class);
+        final Dispatcher.RouterGroup staticSiteConsoleGroup = Dispatcher.group();
+        staticSiteConsoleGroup.middlewares(consoleAdminAuthMidware::handle);
+        staticSiteConsoleGroup.put("/console/staticsite", staticSiteConsole::genSite);
+
+        final FetchUploadProcessor fetchUploadProcessor = beanManager.getReference(FetchUploadProcessor.class);
+        Dispatcher.post("/upload/fetch", fetchUploadProcessor::fetchUpload, consoleAuthMidware::handle);
     }
 
     /**

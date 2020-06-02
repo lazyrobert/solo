@@ -2,29 +2,24 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.service;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.service.annotation.Service;
 import org.b3log.latke.util.Strings;
 import org.b3log.solo.model.Article;
@@ -40,7 +35,7 @@ import java.util.*;
  * Import service.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.0.1.6, Nov 22, 2019
+ * @version 1.0.1.7, May 21, 2020
  * @since 2.2.0
  */
 @Service
@@ -49,7 +44,7 @@ public class ImportService {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(ImportService.class);
+    private static final Logger LOGGER = LogManager.getLogger(ImportService.class);
 
     /**
      * Default tag.
@@ -69,8 +64,7 @@ public class ImportService {
     private UserQueryService userQueryService;
 
     /**
-     * Imports markdowns files as articles. See <a href="https://hacpai.com/article/1498490209748">Solo 支持 Hexo/Jekyll 数据导入</a> for
-     * more details.
+     * Imports markdown files as articles. See <a href="https://hacpai.com/article/1498490209748">Solo 支持 Hexo/Jekyll 数据导入</a> for more details.
      */
     public void importMarkdowns() {
         new Thread(() -> {
@@ -85,65 +79,81 @@ public class ImportService {
             }
 
             final File markdownsPath = Latkes.getFile("/markdowns");
-            LOGGER.debug("Import directory [" + markdownsPath.getPath() + "]");
-
-            final JSONObject admin = userQueryService.getAdmin();
-            if (null == admin) { // Not init yet
-                return;
-            }
-
-            final String adminId = admin.optString(Keys.OBJECT_ID);
-
-            int succCnt = 0, failCnt = 0;
-            final Set<String> failSet = new TreeSet<>();
-            final Collection<File> mds = FileUtils.listFiles(markdownsPath, new String[]{"md"}, true);
-            if (null == mds || mds.isEmpty()) {
-                return;
-            }
-
-            for (final File md : mds) {
-                final String fileName = md.getName();
-                if (StringUtils.equalsIgnoreCase(fileName, "README.md")) {
-                    continue;
-                }
-
-                try {
-                    final String fileContent = FileUtils.readFileToString(md, "UTF-8");
-                    final JSONObject article = parseArticle(fileName, fileContent);
-                    article.put(Article.ARTICLE_AUTHOR_ID, adminId);
-
-                    final JSONObject request = new JSONObject();
-                    request.put(Article.ARTICLE, article);
-
-                    final String id = articleMgmtService.addArticle(request);
-                    FileUtils.moveFile(md, new File(md.getPath() + "." + id));
-                    LOGGER.info("Imported article [" + article.optString(Article.ARTICLE_TITLE) + "]");
-                    succCnt++;
-                } catch (final Exception e) {
-                    LOGGER.log(Level.ERROR, "Import file [" + fileName + "] failed", e);
-
-                    failCnt++;
-                    failSet.add(fileName);
-                }
-            }
-
-            if (0 == succCnt && 0 == failCnt) {
-                return;
-            }
-
-            final StringBuilder logBuilder = new StringBuilder();
-            logBuilder.append("[").append(succCnt).append("] imported, [").append(failCnt).append("] failed");
-            if (failCnt > 0) {
-                logBuilder.append(": ").append(Strings.LINE_SEPARATOR);
-
-                for (final String fail : failSet) {
-                    logBuilder.append("    ").append(fail).append(Strings.LINE_SEPARATOR);
-                }
-            } else {
-                logBuilder.append(" :p");
-            }
-            LOGGER.info(logBuilder.toString());
+            importMarkdownDir(markdownsPath);
         }).start();
+    }
+
+    /**
+     * Imports markdown files under the specified markdown files dir.
+     *
+     * @param markdownsDir the specified markdown files dir
+     * @return <pre>
+     * {
+     *     "failCount": int,
+     *     "succCnt": int
+     * }
+     * </pre>
+     */
+    public JSONObject importMarkdownDir(final File markdownsDir) {
+        LOGGER.debug("Import directory [" + markdownsDir.getPath() + "]");
+
+        final JSONObject admin = userQueryService.getAdmin();
+        if (null == admin) { // Not init yet
+            return null;
+        }
+
+        final String adminId = admin.optString(Keys.OBJECT_ID);
+
+        int succCnt = 0, failCnt = 0;
+        final Set<String> failSet = new TreeSet<>();
+        final Collection<File> mds = FileUtils.listFiles(markdownsDir, new String[]{"md"}, true);
+        if (mds.isEmpty()) {
+            return null;
+        }
+
+        for (final File md : mds) {
+            final String fileName = md.getName();
+            if (StringUtils.equalsIgnoreCase(fileName, "README.md")) {
+                continue;
+            }
+
+            try {
+                final String fileContent = FileUtils.readFileToString(md, "UTF-8");
+                final JSONObject article = parseArticle(fileName, fileContent);
+                article.put(Article.ARTICLE_AUTHOR_ID, adminId);
+
+                final JSONObject request = new JSONObject();
+                request.put(Article.ARTICLE, article);
+
+                final String id = articleMgmtService.addArticle(request);
+                FileUtils.moveFile(md, new File(md.getPath() + "." + id));
+                LOGGER.info("Imported article [" + article.optString(Article.ARTICLE_TITLE) + "]");
+                succCnt++;
+            } catch (final Exception e) {
+                LOGGER.log(Level.ERROR, "Import file [" + fileName + "] failed", e);
+
+                failCnt++;
+                failSet.add(fileName);
+            }
+        }
+
+        if (0 == succCnt && 0 == failCnt) {
+            return null;
+        }
+
+        final StringBuilder logBuilder = new StringBuilder();
+        logBuilder.append("[").append(succCnt).append("] imported, [").append(failCnt).append("] failed");
+        if (failCnt > 0) {
+            logBuilder.append(": ").append(Strings.LINE_SEPARATOR);
+
+            for (final String fail : failSet) {
+                logBuilder.append("    ").append(fail).append(Strings.LINE_SEPARATOR);
+            }
+        } else {
+            logBuilder.append(" :p");
+        }
+        LOGGER.info(logBuilder.toString());
+        return new JSONObject().put("failCount", failCnt).put("succCount", succCnt);
     }
 
     private JSONObject parseArticle(final String fileName, String fileContent) {
@@ -191,6 +201,10 @@ public class ImportService {
 
         final Date date = parseDate(elems);
         ret.put(Article.ARTICLE_CREATED, date.getTime());
+
+        // 文章 id 必须使用存档时间戳，否则生成的存档时间会是当前时间
+        // 导入 Markdown 文件存档时间问题 https://github.com/88250/solo/issues/112
+        ret.put(Keys.OBJECT_ID, String.valueOf(date.getTime()));
 
         final String permalink = (String) elems.get("permalink");
         if (StringUtils.isNotBlank(permalink)) {

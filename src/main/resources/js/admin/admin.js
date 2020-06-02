@@ -2,28 +2,25 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
+import $ from 'jquery'
+import '../common'
+import '../lib/jquery/jquery.bowknot.min'
 /**
  * @description index for admin
  *
  * @author <a href="http://vanessa.b3log.org">Liyuan Li</a>
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.4.0.0, Apr 22, 2019
+ * @version 1.4.0.1, Jan 13, 2020
  */
 
-Util.htmlDecode = function (code) {
+window.htmlDecode = function (code) {
   var div = document.createElement('div')
   div.innerHTML = decodeURIComponent(code)
   return div.innerText
@@ -34,11 +31,7 @@ var Admin = function () {
   // 工具栏下的工具
   this.tools = [
     '#page-list', '#theme-list', '#link-list', '#preference',
-    '#user-list', '#plugin-list', '#others', '#category-list']
-  // 多用户时，一般用户不能使用的功能
-  this.adTools = [
-    'link-list', 'preference', 'theme-list', 'page-list',
-    'user-list', 'plugin-list', 'others', 'category-list']
+    '#user-list', '#plugin-list', '#others', '#category-list', "#staticsite"]
 }
 
 $.extend(Admin.prototype, {
@@ -264,9 +257,7 @@ $.extend(Admin.prototype, {
   inited: function () {
     // Removes functions with the current user role
     if (Label.userRole !== 'adminRole') {
-      for (var i = 0; i < this.adTools.length; i++) {
-        $('#tabs').tabs('remove', this.adTools[i])
-      }
+      $('#tools').remove();
     } else {
       // 当前 tab 属于 Tools 时，设其展开
       for (var j = 0; j < this.tools.length; j++) {
@@ -280,4 +271,4 @@ $.extend(Admin.prototype, {
   },
 })
 
-var admin = new Admin()
+window.admin = new Admin()

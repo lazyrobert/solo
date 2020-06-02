@@ -2,31 +2,24 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.processor;
 
 import freemarker.template.Template;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
-import org.b3log.latke.http.HttpMethod;
 import org.b3log.latke.http.RequestContext;
-import org.b3log.latke.http.annotation.RequestProcessing;
-import org.b3log.latke.http.annotation.RequestProcessor;
 import org.b3log.latke.http.renderer.JsonRenderer;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.model.User;
 import org.b3log.latke.service.LangPropsService;
 import org.b3log.solo.model.Article;
@@ -50,16 +43,16 @@ import java.util.Map;
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://hacpai.com/member/armstrong">ArmstrongCN</a>
- * @version 1.4.0.0, Apr 18, 2019
+ * @version 2.0.0.0, Feb 9, 2020
  * @since 0.3.1
  */
-@RequestProcessor
+@Singleton
 public class CommentProcessor {
 
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(CommentProcessor.class);
+    private static final Logger LOGGER = LogManager.getLogger(CommentProcessor.class);
 
     /**
      * Language service.
@@ -124,7 +117,6 @@ public class CommentProcessor {
      *
      * @param context the specified context, including a request json object
      */
-    @RequestProcessing(value = "/article/comments", method = HttpMethod.POST)
     public void addArticleComment(final RequestContext context) {
         final JSONObject requestJSONObject = context.requestJSON();
         requestJSONObject.put(Common.TYPE, Article.ARTICLE);
@@ -137,14 +129,13 @@ public class CommentProcessor {
         renderer.setJSONObject(jsonObject);
 
         if (!jsonObject.optBoolean(Keys.STATUS_CODE)) {
-            LOGGER.log(Level.WARN, "Can't add comment[msg={0}]", jsonObject.optString(Keys.MSG));
+            LOGGER.log(Level.WARN, "Can't add comment[msg={}]", jsonObject.optString(Keys.MSG));
             return;
         }
 
         if (!Solos.isLoggedIn(context)) {
             jsonObject.put(Keys.STATUS_CODE, false);
             jsonObject.put(Keys.MSG, "Need login");
-
             return;
         }
 
@@ -160,7 +151,7 @@ public class CommentProcessor {
 
             // 添加评论优化 https://github.com/b3log/solo/issues/12246
             try {
-                final String skinDirName = (String) context.attr(Keys.TEMAPLTE_DIR_NAME);
+                final String skinDirName = (String) context.attr(Keys.TEMPLATE_DIR_NAME);
                 final Template template = Skins.getSkinTemplate(context, "common-comment.ftl");
                 final JSONObject preference = optionQueryService.getPreference();
                 Skins.fillLangs(preference.optString(Option.ID_C_LOCALE_STRING), skinDirName, dataModel);
@@ -193,7 +184,7 @@ public class CommentProcessor {
      * @param context           the specified HTTP request context
      */
     private void fillCommenter(final JSONObject requestJSONObject, final RequestContext context) {
-        final JSONObject currentUser = Solos.getCurrentUser(context.getRequest(), context.getResponse());
+        final JSONObject currentUser = Solos.getCurrentUser(context);
         if (null == currentUser) {
             return;
         }

@@ -2,29 +2,23 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 /**
 * admin style
 *
 * @author <a href="http://vanessa.b3log.org">Liyuan Li</a>
 * @author <a href="http://88250.b3log.org">Liang Ding</a>
-* @version 3.3.0.0, Nov 12, 2019
+* @version 3.3.1.0, Apr 30, 2020
 */
 @import "reset";
 @import "function";
-@import "vditor/src/assets/scss/classic";
+@import "vditor/src/assets/scss/index";
 
 body {
   color: #767676;
@@ -304,13 +298,16 @@ a[class*=" icon-"]:hover {
 /* start first tab */
 #tabs {
   height: 100%;
-  min-height: 468px;
   width: 240px;
   margin-top: 50px;
   position: fixed;
   top: 0;
   background-color: #32323a;
   overflow: auto;
+  z-index: 1;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 #tabs ul {
@@ -613,10 +610,10 @@ button#submitArticle:hover {
 
 /* start common list */
 .small-head {
-  float: left;
-  height: 35px;
-  margin: 3px 9px 0 3px;
-  width: 35px;
+  height: 25px;
+  width: 25px;
+  border-radius: 20px;
+  margin-right: 5px;
 }
 
 #commentTable .table-main td {
@@ -744,7 +741,7 @@ button#submitArticle:hover {
 
 .dialog-panel {
   display: none;
-  position: absolute;
+  position: fixed;
   z-index: 100;
 }
 
@@ -840,6 +837,7 @@ button#submitArticle:hover {
 .table-main table {
   word-break: break-all;
   word-wrap: break-word;
+  table-layout: fixed;
 }
 
 .table-header {
@@ -960,6 +958,10 @@ button#submitArticle:hover {
   line-height: 22px;
   color: #24292e;
   border-radius: 0 0 3px 3px;
+}
+
+.solo-kanbanniang {
+  z-index: 1;
 }
 
 @media (max-width: 768px) {

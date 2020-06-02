@@ -1,6 +1,6 @@
 {
-  "name": "Solo",
-  "version": "3.6.7",
+  "name": "solo",
+  "version": "4.1.0",
   "description": " 一款小而美的博客系统，专为程序员设计。",
   "homepage": "https://github.com/88250/solo",
   "repository": {
@@ -10,33 +10,51 @@
   "bugs": {
     "url": "https://github.com/88250/solo/issues"
   },
-  "license": "AGPLv3",
+  "license": "MulanPSL2",
   "private": true,
   "scripts": {
-    "dev": "gulp watch",
-    "build": "gulp"
+    "build": "webpack --mode production",
+    "dev": "webpack"
   },
-  "author": "Daniel <dl882509@gmail.com> (http://88250.b3log.org) & Vanessa <v@b3log.org> (http://vanessa.b3log.org)",
+  "author": {
+    "name": "B3log 开源社区",
+    "email": "os@b3log.org",
+    "url": "https://b3log.org"
+  },
   "maintainers": [
     {
-      "name": "Daniel",
-      "email": "d@b3log.org"
+      "name": "Liang Ding",
+      "email": "d@b3log.org",
+      "url": "http://88250.b3log.org"
     },
     {
-      "name": "Vanessa",
-      "email": "v@b3log.org"
+      "name": "Liyuan Li",
+      "email": "v@b3log.org",
+      "url": "http://vanessa.b3log.org"
     }
   ],
   "devDependencies": {
-    "del": "^5.1.0",
-    "gulp": "^4.0.2",
-    "gulp-autoprefixer": "^7.0.1",
-    "gulp-concat": "^2.6.1",
-    "gulp-rename": "^1.4.0",
-    "gulp-sass": "^4.0.2",
-    "gulp-terser": "^1.2.0"
+    "@babel/core": "^7.8.3",
+    "@babel/preset-env": "^7.8.3",
+    "autoprefixer": "^9.7.4",
+    "babel-loader": "^8.0.6",
+    "clean-webpack-plugin": "^3.0.0",
+    "css-loader": "^3.4.2",
+    "extract-loader": "^3.1.0",
+    "file-loader": "^5.0.2",
+    "node-sass": "^4.14.1",
+    "optimize-css-assets-webpack-plugin": "^5.0.3",
+    "postcss-loader": "^3.0.0",
+    "sass-loader": "^8.0.2",
+    "terser-webpack-plugin": "^2.3.2",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
   },
   "dependencies": {
-    "vditor": "^1.10.0"
+    "jquery": "^3.5.0",
+    "nprogress": "^0.2.0",
+    "uvstat": "^1.0.7",
+    "vcmt": "^1.2.1",
+    "vditor": "^3.2.10"
   }
 }

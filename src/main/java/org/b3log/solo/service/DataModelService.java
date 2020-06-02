@@ -2,24 +2,21 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.service;
 
 import freemarker.template.Template;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
 import org.b3log.latke.event.Event;
@@ -27,8 +24,6 @@ import org.b3log.latke.event.EventManager;
 import org.b3log.latke.http.RequestContext;
 import org.b3log.latke.ioc.BeanManager;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
 import org.b3log.latke.model.Pagination;
 import org.b3log.latke.model.Plugin;
 import org.b3log.latke.model.Role;
@@ -46,8 +41,6 @@ import org.b3log.solo.util.Markdowns;
 import org.b3log.solo.util.Skins;
 import org.b3log.solo.util.Solos;
 import org.json.JSONObject;
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Whitelist;
 
 import java.io.StringWriter;
 import java.util.*;
@@ -59,7 +52,7 @@ import static org.b3log.solo.model.Article.ARTICLE_CONTENT;
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="http://vanessa.b3log.org">Liyuan Li</a>
- * @version 1.7.0.11, Sep 17, 2019
+ * @version 1.7.1.0, May 18, 2020
  * @since 0.3.1
  */
 @Service
@@ -68,7 +61,7 @@ public class DataModelService {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(DataModelService.class);
+    private static final Logger LOGGER = LogManager.getLogger(DataModelService.class);
 
     /**
      * Article repository.
@@ -217,7 +210,7 @@ public class DataModelService {
                 }
 
             final JSONObject articlesResult = articleRepository.get(query);
-            final List<JSONObject> articles = CollectionUtils.jsonArrayToList(articlesResult.optJSONArray(Keys.RESULTS));
+            final List<JSONObject> articles = (List<JSONObject>) articlesResult.opt(Keys.RESULTS);
             final int pageCount = articlesResult.optJSONObject(Pagination.PAGINATION).optInt(Pagination.PAGINATION_PAGE_COUNT);
             setArticlesExProperties(context, articles, preference);
 
@@ -278,7 +271,7 @@ public class DataModelService {
     public void fillTags(final Map<String, Object> dataModel) throws ServiceException {
         Stopwatchs.start("Fill Tags");
         try {
-            final List<JSONObject> tags = tagQueryService.getTags();
+            final List<JSONObject> tags = tagQueryService.getTagsOfPublishedArticles();
             dataModel.put(Tag.TAGS, tags);
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Fills tags failed", e);
@@ -395,7 +388,7 @@ public class DataModelService {
                     if (!dateString.equals(lastDateString)) {
                         archiveDates2.add(archiveDate);
                     } else {
-                        LOGGER.log(Level.DEBUG, "Found a duplicated archive date [{0}]", dateString);
+                        LOGGER.log(Level.DEBUG, "Found a duplicated archive date [{}]", dateString);
                     }
                 }
             }
@@ -431,54 +424,6 @@ public class DataModelService {
     }
 
     /**
-     * Fills most view count articles.
-     *
-     * @param dataModel  data model
-     * @param preference the specified preference
-     * @throws ServiceException service exception
-     */
-    public void fillMostViewCountArticles(final Map<String, Object> dataModel, final JSONObject preference) throws ServiceException {
-        Stopwatchs.start("Fill Most View Articles");
-        try {
-            LOGGER.debug("Filling the most view count articles....");
-            final int mostCommentArticleDisplayCnt = preference.getInt(Option.ID_C_MOST_VIEW_ARTICLE_DISPLAY_CNT);
-            final List<JSONObject> mostViewCountArticles = articleRepository.getMostViewCountArticles(mostCommentArticleDisplayCnt);
-
-            dataModel.put(Common.MOST_VIEW_COUNT_ARTICLES, mostViewCountArticles);
-
-        } catch (final Exception e) {
-            LOGGER.log(Level.ERROR, "Fills most view count articles failed", e);
-            throw new ServiceException(e);
-        } finally {
-            Stopwatchs.end();
-        }
-    }
-
-    /**
-     * Fills most comments articles.
-     *
-     * @param dataModel  data model
-     * @param preference the specified preference
-     * @throws ServiceException service exception
-     */
-    public void fillMostCommentArticles(final Map<String, Object> dataModel, final JSONObject preference) throws ServiceException {
-        Stopwatchs.start("Fill Most CMMTs Articles");
-
-        try {
-            LOGGER.debug("Filling most comment articles....");
-            final int mostCommentArticleDisplayCnt = preference.getInt(Option.ID_C_MOST_COMMENT_ARTICLE_DISPLAY_CNT);
-            final List<JSONObject> mostCommentArticles = articleRepository.getMostCommentArticles(mostCommentArticleDisplayCnt);
-
-            dataModel.put(Common.MOST_COMMENT_ARTICLES, mostCommentArticles);
-        } catch (final Exception e) {
-            LOGGER.log(Level.ERROR, "Fills most comment articles failed", e);
-            throw new ServiceException(e);
-        } finally {
-            Stopwatchs.end();
-        }
-    }
-
-    /**
      * Fills post articles recently.
      *
      * @param dataModel  data model
@@ -494,41 +439,6 @@ public class DataModelService {
             dataModel.put(Common.RECENT_ARTICLES, recentArticles);
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Fills recent articles failed", e);
-
-            throw new ServiceException(e);
-        } finally {
-            Stopwatchs.end();
-        }
-    }
-
-    /**
-     * Fills post comments recently.
-     *
-     * @param dataModel  data model
-     * @param preference the specified preference
-     * @throws ServiceException service exception
-     */
-    public void fillRecentComments(final Map<String, Object> dataModel, final JSONObject preference) throws ServiceException {
-        Stopwatchs.start("Fill Recent Comments");
-        try {
-            LOGGER.debug("Filling recent comments....");
-            final int recentCommentDisplayCnt = preference.getInt(Option.ID_C_RECENT_COMMENT_DISPLAY_CNT);
-            final List<JSONObject> recentComments = commentRepository.getRecentComments(recentCommentDisplayCnt);
-            for (final JSONObject comment : recentComments) {
-                String commentContent = comment.optString(Comment.COMMENT_CONTENT);
-                commentContent = Markdowns.toHTML(commentContent);
-                commentContent = Jsoup.clean(commentContent, Whitelist.relaxed());
-                comment.put(Comment.COMMENT_CONTENT, commentContent);
-                comment.put(Comment.COMMENT_NAME, comment.getString(Comment.COMMENT_NAME));
-                comment.put(Comment.COMMENT_URL, comment.getString(Comment.COMMENT_URL));
-                comment.put(Common.IS_REPLY, false);
-                comment.put(Comment.COMMENT_T_DATE, new Date(comment.optLong(Comment.COMMENT_CREATED)));
-                comment.put("commentDate2", new Date(comment.optLong(Comment.COMMENT_CREATED)));
-            }
-
-            dataModel.put(Common.RECENT_COMMENTS, recentComments);
-        } catch (final Exception e) {
-            LOGGER.log(Level.ERROR, "Fills recent comments failed", e);
 
             throw new ServiceException(e);
         } finally {
@@ -585,11 +495,10 @@ public class DataModelService {
         final Map<String, String> customVars = new HashMap<>();
         final String customVarsStr = preference.optString(Option.ID_C_CUSTOM_VARS);
         final String[] customVarsArray = customVarsStr.split("\\|");
-        for (int i = 0; i < customVarsArray.length; i++) {
-            final String customVarPair = customVarsArray[i];
+        for (final String customVarPair : customVarsArray) {
             if (StringUtils.isNotBlank(customVarsStr)) {
-                final String customVarKey = customVarPair.split("=")[0];
-                final String customVarVal = customVarPair.split("=")[1];
+                final String customVarKey = StringUtils.substringBefore(customVarPair, "=");
+                final String customVarVal = StringUtils.substringAfter(customVarPair, "=");
                 if (StringUtils.isNotBlank(customVarKey) && StringUtils.isNotBlank(customVarVal)) {
                     customVars.put(customVarKey, customVarVal);
                 }
@@ -603,6 +512,21 @@ public class DataModelService {
             hljsTheme = Option.DefaultPreference.DEFAULT_HLJS_THEME;
         }
         dataModel.put(Option.ID_C_HLJS_THEME, hljsTheme);
+
+        String showCodeBlockLn = preference.optString(Option.ID_C_SHOW_CODE_BLOCK_LN);
+        if (StringUtils.isBlank(showCodeBlockLn)) {
+            showCodeBlockLn = Option.DefaultPreference.DEFAULT_SHOW_CODE_BLOCK_LN;
+        }
+        dataModel.put(Option.ID_C_SHOW_CODE_BLOCK_LN, showCodeBlockLn);
+
+        dataModel.put(Common.COMMENTABLE, preference.optBoolean(Option.ID_C_COMMENTABLE));
+
+        dataModel.put("staticSite", Solos.GEN_STATIC_SITE);
+        if (!Solos.GEN_STATIC_SITE) {
+            dataModel.put("pagingSep", "?p=");
+        } else {
+            dataModel.put("pagingSep", "/p/");
+        }
     }
 
     /**
@@ -634,7 +558,7 @@ public class DataModelService {
             dataModel.put(Keys.Server.SERVER, Latkes.getServer());
             dataModel.put(Common.IS_INDEX, "/".equals(context.requestURI()));
             dataModel.put(User.USER_NAME, "");
-            final JSONObject currentUser = Solos.getCurrentUser(context.getRequest(), context.getResponse());
+            final JSONObject currentUser = Solos.getCurrentUser(context);
             if (null != currentUser) {
                 final String userAvatar = currentUser.optString(UserExt.USER_AVATAR);
                 dataModel.put(Common.GRAVATAR, userAvatar);
@@ -694,7 +618,7 @@ public class DataModelService {
             }
             dataModel.put(Option.ID_C_META_DESCRIPTION, metaDescription);
             dataModel.put(Common.YEAR, String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-            dataModel.put(Common.IS_LOGGED_IN, null != Solos.getCurrentUser(context.getRequest(), context.getResponse()));
+            dataModel.put(Common.IS_LOGGED_IN, null != Solos.getCurrentUser(context));
             dataModel.put(Common.FAVICON_API, Solos.FAVICON_API);
             final String noticeBoard = preference.getString(Option.ID_C_NOTICE_BOARD);
             dataModel.put(Option.ID_C_NOTICE_BOARD, noticeBoard);
@@ -704,10 +628,9 @@ public class DataModelService {
             dataModel.put(User.USERS, userList);
             final JSONObject admin = userRepository.getAdmin();
             dataModel.put(Common.ADMIN_USER, admin);
-            final String skinDirName = (String) context.attr(Keys.TEMAPLTE_DIR_NAME);
+            final String skinDirName = (String) context.attr(Keys.TEMPLATE_DIR_NAME);
             dataModel.put(Option.ID_C_SKIN_DIR_NAME, skinDirName);
             Keys.fillRuntime(dataModel);
-            fillMinified(dataModel);
             fillPageNavigations(dataModel);
             fillStatistic(dataModel);
             fillMostUsedTags(dataModel, preference);
@@ -719,26 +642,6 @@ public class DataModelService {
             throw new ServiceException(e);
         } finally {
             Stopwatchs.end();
-        }
-    }
-
-    /**
-     * Fills minified directory and file postfix for static JavaScript, CSS.
-     *
-     * @param dataModel the specified data model
-     */
-    public void fillMinified(final Map<String, Object> dataModel) {
-        switch (Latkes.getRuntimeMode()) {
-            case DEVELOPMENT:
-                dataModel.put(Common.MINI_POSTFIX, "");
-                break;
-
-            case PRODUCTION:
-                dataModel.put(Common.MINI_POSTFIX, Common.MINI_POSTFIX_VALUE);
-                break;
-
-            default:
-                throw new AssertionError();
         }
     }
 
@@ -774,18 +677,6 @@ public class DataModelService {
             if (Templates.hasExpression(template, "<#list links as link>")) {
                 fillLinks(dataModel);
             }
-
-            if (Templates.hasExpression(template, "<#list recentComments as comment>")) {
-                fillRecentComments(dataModel, preference);
-            }
-
-            if (Templates.hasExpression(template, "<#list mostCommentArticles as article>")) {
-                fillMostCommentArticles(dataModel, preference);
-            }
-
-            if (Templates.hasExpression(template, "<#list mostViewCountArticles as article>")) {
-                fillMostViewCountArticles(dataModel, preference);
-            }
         } catch (final ServiceException e) {
             LOGGER.log(Level.ERROR, "Fills side failed", e);
             throw new ServiceException(e);
@@ -807,7 +698,7 @@ public class DataModelService {
                                  final Map<String, Object> dataModel, final JSONObject preference) throws ServiceException {
         Stopwatchs.start("Fill User Template[name=" + template.getName() + "]");
         try {
-            LOGGER.log(Level.DEBUG, "Filling user template[name{0}]", template.getName());
+            LOGGER.log(Level.DEBUG, "Filling user template[name{}]", template.getName());
 
             if (Templates.hasExpression(template, "<#list links as link>")) {
                 fillLinks(dataModel);
@@ -819,18 +710,6 @@ public class DataModelService {
 
             if (Templates.hasExpression(template, "<#list categories as category>")) {
                 fillCategories(dataModel);
-            }
-
-            if (Templates.hasExpression(template, "<#list recentComments as comment>")) {
-                fillRecentComments(dataModel, preference);
-            }
-
-            if (Templates.hasExpression(template, "<#list mostCommentArticles as article>")) {
-                fillMostCommentArticles(dataModel, preference);
-            }
-
-            if (Templates.hasExpression(template, "<#list mostViewCountArticles as article>")) {
-                fillMostViewCountArticles(dataModel, preference);
             }
 
             if (Templates.hasExpression(template, "<#include \"side.ftl\"/>")) {
@@ -1060,13 +939,17 @@ public class DataModelService {
      * @throws ServiceException service exception
      */
     public String getTopBarHTML(final RequestContext context) throws ServiceException {
+        if (Solos.GEN_STATIC_SITE) {
+            return "";
+        }
+
         Stopwatchs.start("Gens Top Bar HTML");
 
         try {
             final Template topBarTemplate = Skins.getTemplate("common-template/top-bar.ftl");
             final StringWriter stringWriter = new StringWriter();
             final Map<String, Object> topBarModel = new HashMap<>();
-            final JSONObject currentUser = Solos.getCurrentUser(context.getRequest(), context.getResponse());
+            final JSONObject currentUser = Solos.getCurrentUser(context);
 
             Keys.fillServer(topBarModel);
             topBarModel.put(Common.IS_LOGGED_IN, false);

@@ -2,18 +2,12 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.model;
 
@@ -22,20 +16,10 @@ package org.b3log.solo.model;
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://hacpai.com/member/e">Dongxu Wang</a>
- * @version 1.7.0.6, Sep 17, 2019
+ * @version 1.7.0.9, Apr 30, 2020
  * @since 0.3.1
  */
 public final class Common {
-
-    /**
-     * Key of skin cookie name.
-     */
-    public static final String COOKIE_NAME_SKIN = "skin";
-
-    /**
-     * Key of mobile skin cookie name.
-     */
-    public static final String COOKIE_NAME_MOBILE_SKIN = "mobile-skin";
 
     /**
      * Key of favicon URL.
@@ -98,24 +82,9 @@ public final class Common {
     public static final String MOST_USED_CATEGORIES = "mostUsedCategories";
 
     /**
-     * Most comment count articles.
-     */
-    public static final String MOST_COMMENT_ARTICLES = "mostCommentArticles";
-
-    /**
-     * Most view count articles.
-     */
-    public static final String MOST_VIEW_COUNT_ARTICLES = "mostViewCountArticles";
-
-    /**
      * Recent articles.
      */
     public static final String RECENT_ARTICLES = "recentArticles";
-
-    /**
-     * Recent comments.
-     */
-    public static final String RECENT_COMMENTS = "recentComments";
 
     /**
      * Previous article permalink.
@@ -271,16 +240,6 @@ public final class Common {
      * Key of post to community.
      */
     public static final String POST_TO_COMMUNITY = "postToCommunity";
-
-    /**
-     * Key of mini postfix.
-     */
-    public static final String MINI_POSTFIX = "miniPostfix";
-
-    /**
-     * Value of mini postfix.
-     */
-    public static final String MINI_POSTFIX_VALUE = ".min";
 
     /**
      * Key of month name.

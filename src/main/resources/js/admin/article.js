@@ -2,25 +2,19 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 /**
  * @fileoverview article for admin
  *
  * @author <a href="http://vanessa.b3log.org">Liyuan Li</a>
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.6.0.5, Aug 6, 2019
+ * @version 1.6.1.0, Dec 15, 2019
  */
 admin.article = {
   // 当发文章，取消发布，更新文章时设置为 false。不需在离开编辑器时进行提示。
@@ -48,7 +42,7 @@ admin.article = {
     $('#tipMsg').text('')
     $.ajax({
       url: Label.servePath + '/console/article/' +
-      admin.article.status.id,
+        admin.article.status.id,
       type: 'GET',
       cache: false,
       success: function (result, textStatus) {
@@ -105,7 +99,7 @@ admin.article = {
    */
   del: function (id, fromId, title) {
     var isDelete = confirm(Label.confirmRemoveLabel + Label.articleLabel + '"' +
-      Util.htmlDecode(title) + '"?')
+      htmlDecode(title) + '"?')
     if (isDelete) {
       $('#loadMsg').text(Label.loadingLabel)
       $('#tipMsg').text('')
@@ -121,7 +115,15 @@ admin.article = {
             return
           }
 
-          admin[fromId + 'List'].getList(1)
+          if (document.querySelectorAll('tr').length === 2) {
+            const refreshPage = Math.max(
+              (admin[fromId + 'List'].tablePagination.currentPage - 1), 1)
+            admin[fromId + 'List'].getList(refreshPage)
+            admin.setHashByPage(refreshPage)
+          } else {
+            admin[fromId + 'List'].getList(
+              admin[fromId + 'List'].tablePagination.currentPage)
+          }
         },
       })
     }
@@ -414,12 +416,13 @@ admin.article = {
 
     // editor
     admin.editors.articleEditor = new SoloEditor({
+      outline: true,
       id: 'articleContent',
       height: 500,
       fun: fun,
       previewMode: 'both',
       resize: false,
-      typewriterMode: true
+      typewriterMode: true,
     })
 
     admin.editors.abstractEditor = new SoloEditor({
@@ -473,7 +476,7 @@ admin.article = {
     that._addDisabled()
     $.ajax({
       url: Label.servePath + '/console/article/unpublish/' +
-      admin.article.status.id,
+        admin.article.status.id,
       type: 'PUT',
       cache: false,
       success: function (result, textStatus) {

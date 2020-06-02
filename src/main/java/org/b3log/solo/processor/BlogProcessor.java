@@ -2,33 +2,26 @@
  * Solo - A small and beautiful blogging system written in Java.
  * Copyright (c) 2010-present, b3log.org
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Solo is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *         http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 package org.b3log.solo.processor;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.b3log.latke.Keys;
 import org.b3log.latke.Latkes;
-import org.b3log.latke.http.HttpMethod;
 import org.b3log.latke.http.RequestContext;
-import org.b3log.latke.http.annotation.RequestProcessing;
-import org.b3log.latke.http.annotation.RequestProcessor;
 import org.b3log.latke.http.renderer.JsonRenderer;
 import org.b3log.latke.ioc.Inject;
-import org.b3log.latke.logging.Level;
-import org.b3log.latke.logging.Logger;
+import org.b3log.latke.ioc.Singleton;
 import org.b3log.latke.model.Pagination;
 import org.b3log.latke.model.User;
 import org.b3log.solo.Server;
@@ -39,21 +32,23 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * Blog processor.
  *
  * @author <a href="http://88250.b3log.org">Liang Ding</a>
- * @version 1.4.0.2, Nov 15, 2019
+ * @version 2.0.0.1, Apr 15, 2020
  * @since 0.4.6
  */
-@RequestProcessor
+@Singleton
 public class BlogProcessor {
 
     /**
      * Logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(BlogProcessor.class);
+    private static final Logger LOGGER = LogManager.getLogger(BlogProcessor.class);
 
     /**
      * Article query service.
@@ -92,7 +87,7 @@ public class BlogProcessor {
 
     static {
         try (final InputStream tplStream = BlogProcessor.class.getResourceAsStream("/manifest.json.tpl")) {
-            PWA_MANIFESTO_JSON = IOUtils.toString(tplStream, "UTF-8");
+            PWA_MANIFESTO_JSON = IOUtils.toString(tplStream, StandardCharsets.UTF_8);
         } catch (final Exception e) {
             LOGGER.log(Level.ERROR, "Loads PWA manifest.json template failed", e);
         }
@@ -103,7 +98,6 @@ public class BlogProcessor {
      *
      * @param context the specified context
      */
-    @RequestProcessing(value = "/manifest.json", method = HttpMethod.GET)
     public void getPWAManifestJSON(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         renderer.setPretty(true);
@@ -141,7 +135,6 @@ public class BlogProcessor {
      *
      * @param context the specified context
      */
-    @RequestProcessing(value = "/blog/info", method = HttpMethod.GET)
     public void getBlogInfo(final RequestContext context) {
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -151,11 +144,15 @@ public class BlogProcessor {
         jsonObject.put("recentArticleTime", articleQueryService.getRecentArticleTime());
         final JSONObject statistic = statisticQueryService.getStatistic();
         jsonObject.put("articleCount", statistic.getLong(Option.ID_T_STATISTIC_PUBLISHED_ARTICLE_COUNT));
-        jsonObject.put("commentCount", statistic.getLong(Option.ID_T_STATISTIC_PUBLISHED_BLOG_COMMENT_COUNT));
         jsonObject.put("tagCount", tagQueryService.getTagCount());
         jsonObject.put("servePath", Latkes.getServePath());
         jsonObject.put("staticServePath", Latkes.getStaticServePath());
-        jsonObject.put("version", Server.VERSION);
+        String version = Server.VERSION;
+        final String gitCommit = System.getenv("git_commit");
+        if (StringUtils.isNotBlank(gitCommit)) {
+            version += ", commit " + gitCommit;
+        }
+        jsonObject.put("version", version);
         jsonObject.put("runtimeMode", Latkes.getRuntimeMode());
         jsonObject.put("runtimeDatabase", Latkes.getRuntimeDatabase());
         jsonObject.put("locale", Latkes.getLocale());
@@ -181,7 +178,6 @@ public class BlogProcessor {
      *
      * @param context the specified context
      */
-    @RequestProcessing(value = "/blog/articles-tags", method = HttpMethod.GET)
     public void getArticlesTags(final RequestContext context) {
         final JSONObject requestJSONObject = new JSONObject();
         requestJSONObject.put(Pagination.PAGINATION_CURRENT_PAGE_NUM, 1);
@@ -200,7 +196,7 @@ public class BlogProcessor {
         requestJSONObject.put(Keys.EXCLUDES, excludes);
 
         final JSONObject result = articleQueryService.getArticles(requestJSONObject);
-        final JSONArray articles = result.optJSONArray(Article.ARTICLES);
+        final List<JSONObject> articles = (List<JSONObject>) result.opt(Article.ARTICLES);
 
         final JsonRenderer renderer = new JsonRenderer();
         context.setRenderer(renderer);
@@ -210,8 +206,7 @@ public class BlogProcessor {
         final JSONArray data = new JSONArray();
         ret.put("data", data);
 
-        for (int i = 0; i < articles.length(); i++) {
-            final JSONObject article = articles.optJSONObject(i);
+        for (final JSONObject article : articles) {
             final String tagString = article.optString(Article.ARTICLE_TAGS_REF);
 
             final JSONArray tagArray = new JSONArray();
